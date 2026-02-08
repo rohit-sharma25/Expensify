@@ -82,10 +82,20 @@ AuthService.onUserChange((user) => {
   DBService.subscribe(user?.uid, 'monthlyBudget', (data) => {
     const settings = data.find(d => d.id === 'settings');
     monthlyBudget = settings ? settings.value : null;
-    if (budgetInput) budgetInput.value = monthlyBudget || "";
+    if (budgetInput) {
+      budgetInput.value = monthlyBudget || "";
+      budgetInput.disabled = !!monthlyBudget;
+    }
+    if (budgetSave) {
+      budgetSave.textContent = monthlyBudget ? 'Edit Budget' : 'Save Budget';
+      if (monthlyBudget) budgetSave.classList.replace('btn-primary', 'btn-secondary');
+      else budgetSave.classList.replace('btn-secondary', 'btn-primary');
+    }
     updateBudgetUI();
+    updateFinanceSummary();
     renderAnalytics();
   });
+
 });
 
 let filterCategory = "";
@@ -318,6 +328,16 @@ form.onsubmit = async (e) => {
 
 if (budgetSave) {
   budgetSave.onclick = async () => {
+    const isEditing = budgetSave.textContent.includes('Edit');
+
+    if (isEditing) {
+      budgetInput.disabled = false;
+      budgetInput.focus();
+      budgetSave.textContent = 'Save Budget';
+      budgetSave.classList.replace('btn-secondary', 'btn-primary');
+      return;
+    }
+
     const value = parseFloat(budgetInput.value);
 
     if (isNaN(value) || value < 0) {
@@ -337,7 +357,12 @@ if (budgetSave) {
       await DBService.saveData(uid, 'monthlyBudget', 'settings', { id: 'settings', value });
 
       monthlyBudget = value;
+      budgetInput.disabled = true;
+      budgetSave.textContent = 'Edit Budget';
+      budgetSave.classList.replace('btn-primary', 'btn-secondary');
+
       updateBudgetUI();
+      updateFinanceSummary();
       renderAnalytics();
 
       alert(`Monthly budget set to ₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`);
@@ -347,6 +372,7 @@ if (budgetSave) {
     }
   };
 }
+
 
 
 toggleExpense.onclick = () => { toggleExpense.classList.add('active'); toggleIncome.classList.remove('active'); };

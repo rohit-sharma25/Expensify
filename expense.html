@@ -17,7 +17,9 @@
     <div class="container">
       <div class="header-content animate-fade-in-down">
         <div class="brand">
-          <div class="brand-logo">💰</div>
+          <div class="brand-logo">
+            <img src="img/logo.jpg" alt="E" onerror="this.src=''; this.parentElement.innerText='E'">
+          </div>
           <div class="brand-text">
             <h1>EXPENSIFY</h1>
             <p>Manage your expenses</p>
@@ -128,13 +130,13 @@
             <option value="Water" data-category="Bill & Subscription">Water</option>
             <option value="Gas" data-category="Bill & Subscription">Gas</option>
             <option value="Mobile" data-category="Bill & Subscription">Mobile</option>
-            <!-- LLM Models -->  
+            <!-- LLM Models -->
             <option value="ChatGPT" data-category="LLM Models">ChatGPT</option>
             <option value="Claude" data-category="LLM Models">Claude</option>
             <option value="Grok" data-category="LLM Models">Grok</option>
             <option value="Gemini" data-category="LLM Models">Gemini</option>
             <option value="Others" data-category="LLM Models">Others</option>
-          <!-- Peoples -->
+            <!-- Peoples -->
             <option value="Family" data-category="Peoples">Family</option>
             <option value="Friends" data-category="Peoples">Friends</option>
             <option value="Relatives" data-category="Peoples">Relatives</option>
@@ -265,13 +267,17 @@
 
   <!-- THE NEW RADIANT AI CHAT UI -->
   <div id="ai-chat-fab" class="ai-fab">
-    <span>✨</span>
+    <div class="brand-logo" style="width: 32px; height: 32px; font-size: 1rem;">
+      <img src="img/logo.png" alt="E" onerror="this.src=''; this.parentElement.innerText='E'">
+    </div>
   </div>
 
   <div id="ai-chat-popup" class="ai-chat-popup hidden">
     <div class="ai-chat-header">
       <div class="ai-chat-title">
-        <span>🤖</span>
+        <div class="brand-logo" style="width: 24px; height: 24px; font-size: 0.85rem; border-radius: 6px;">
+          <img src="img/logo.png" alt="E" onerror="this.src=''; this.parentElement.innerText='E'">
+        </div>
         <span>Finance AI</span>
       </div>
       <button id="ai-chat-close" class="btn-icon"

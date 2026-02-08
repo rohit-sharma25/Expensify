@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Gemini API Diagnostic</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f4f4f9;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        pre {
+            background: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            overflow: auto;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>Gemini API Diagnostic Tool</h1>
+        <p>This tool will check which models are available for your API Key.</p>
+        <button id="check-btn">Check Available Models</button>
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        import { CONFIG } from './js/config.js';
+
+        document.getElementById('check-btn').onclick = async () => {
+            const results = document.getElementById('results');
+            results.innerHTML = "Checking Gemini API...";
+
+            let html = "";
+
+            // 1. Check Gemini
+            try {
+                const geminiResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${CONFIG.GEMINI_API_KEY}`);
+                const geminiData = await geminiResp.json();
+                if (geminiData.error) {
+                    html += `<p class='error'>Gemini Error: ${geminiData.error.message}</p>`;
+                } else {
+                    html += `<p class='success'>Gemini: Connected! (${geminiData.models[0].name.split('/').pop()} available)</p>`;
+                }
+            } catch (e) { html += `<p class='error'>Gemini: Network Error</p>`; }
+
+            // 2. Check Groq
+            results.innerHTML += "<br>Checking Groq API...";
+            try {
+                const groqResp = await fetch("https://api.groq.com/openai/v1/models", {
+                    headers: { "Authorization": `Bearer ${CONFIG.GROQ_API_KEY}` }
+                });
+                const groqData = await groqResp.json();
+                if (groqData.error) {
+                    html += `<p class='error'>Groq Error: ${groqData.error.message}</p>
+                    <small>Check your key at <a href="https://console.groq.com/keys" target="_blank">Groq Console</a></small>`;
+                } else {
+                    html += `<p class='success'>Groq: Connected! (Found ${groqData.data.length} models)</p>`;
+                }
+            } catch (e) { html += `<p class='error'>Groq: Network Error</p>`; }
+
+            results.innerHTML = html;
+        };
+
+    </script>
+</body>
+
+</html>

@@ -1,51 +1,82 @@
-// js/ai-service.js - Stable AI Service with Robust UI Handler
+import { CONFIG } from './config.js';
+
 export class AIService {
     static async chat(message, context) {
-        const msg = message.toLowerCase();
+        if (!CONFIG.GROQ_API_KEY) {
+            return "Please add your Groq API Key in `js/config.js` to enable the AI assistant.";
+        }
 
-        // Financial Context Logic
+        // Financial Context Extraction
         const today = new Date().toISOString().slice(0, 7);
         const finances = context.finances || [];
         const budget = context.budget || 0;
-
         const spent = finances
             .filter(f => f.type === 'expense' && f.dateISO.startsWith(today))
             .reduce((sum, f) => sum + f.amount, 0);
 
-        if (msg.includes("hello") || msg.includes("hi")) {
-            return "Hi there! 👋 I'm your AI financial advisor. How can I help you manage your money today?";
-        }
+        const recentExpenses = finances
+            .filter(f => f.type === 'expense')
+            .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO))
+            .slice(0, 10);
 
-        if (msg.includes("spent") || msg.includes("spending")) {
-            const budgetMsg = budget > 0
-                ? `\n\nYour budget: ₹${budget.toLocaleString('en-IN')}\nStatus: ${((spent / budget) * 100).toFixed(1)}% used.`
-                : "\n\nTip: Set a budget in the Expenses page to track progress!";
-            return `💰 You've spent **₹${spent.toLocaleString('en-IN')}** this month.${budgetMsg}`;
-        }
+        const systemPrompt = `
+            You are "Expensify AI", a premium, friendly financial advisor. 
+            User Context:
+            - Monthly Budget: ₹${budget.toLocaleString('en-IN')}
+            - Total Spent this Month: ₹${spent.toLocaleString('en-IN')}
+            - Recent Transactions: ${JSON.stringify(recentExpenses.map(e => ({ desc: e.desc, amount: e.amount, cat: e.category })))}
+            
+            Instructions:
+            - Keep responses concise (max 3-4 sentences).
+            - Use emojis and markdown (**bold**).
+            - Based on the data above, give specific advice if asked.
+        `;
 
-        if (msg.includes("save") || msg.includes("tips")) {
-            return "💡 **Quick Savings Tips:**\n1. Review recurring subscriptions.\n2. Use the '30-day rule' for big purchases.\n3. Track every small expense – they add up!";
-        }
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${CONFIG.GROQ_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: message }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 500
+                })
+            });
 
-        if (msg.includes("invest")) {
-            const invested = finances
-                .filter(f => f.category === 'Investment')
-                .reduce((sum, f) => sum + f.amount, 0);
-            return `📈 You've invested a total of **₹${invested.toLocaleString('en-IN')}** so far. Building wealth is a marathon, not a sprint!`;
-        }
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error?.message || "Groq API Error");
+            }
 
-        return "I can help with:\n• Monthly spending analysis\n• Savings suggestions\n• Investment tracking\n\nWhat's on your mind?";
+            const data = await response.json();
+            let aiText = data.choices[0].message.content;
+
+            // Simple Markdown Processing
+            aiText = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            aiText = aiText.replace(/\n/g, '<br>');
+
+            return aiText;
+        } catch (error) {
+            console.error("Groq Error:", error);
+            throw error;
+        }
     }
 
     /**
-     * Stable UI Handler - Guaranteed focus and reactivity
+     * Stable UI Handler
      */
     static init(elements, getContext) {
         const { fab, popup, close, input, send, body } = elements;
 
         if (!fab || !popup || !input) return;
 
-        // Toggle Popup with Focus Management
         fab.addEventListener('click', (e) => {
             e.stopPropagation();
             const isOpening = popup.classList.contains('hidden');
@@ -54,15 +85,12 @@ export class AIService {
             if (isOpening) {
                 setTimeout(() => {
                     input.focus();
-                    input.click(); // Force focus for some mobile browsers
                 }, 100);
             }
         });
 
-        // Close on X
         close?.addEventListener('click', () => popup.classList.add('hidden'));
 
-        // Global Close
         document.addEventListener('click', (e) => {
             if (!popup.contains(e.target) && !fab.contains(e.target)) {
                 popup.classList.add('hidden');
@@ -73,18 +101,16 @@ export class AIService {
             const text = input.value.trim();
             if (!text) return;
 
-            // User Message
             this.appendMessage(body, text, 'user');
             input.value = '';
 
-            // AI Response
-            const aiMsg = this.appendMessage(body, 'Thinking...', 'ai');
+            const aiMsg = this.appendMessage(body, '<span class="typing-dots">Thinking...</span>', 'ai');
 
             try {
                 const response = await this.chat(text, getContext());
                 aiMsg.innerHTML = response;
             } catch (err) {
-                aiMsg.textContent = "I'm having a bit of trouble. Please try again later.";
+                aiMsg.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span><br><small style="color:var(--muted)">Ensure your GROQ_API_KEY is valid in config.js</small>`;
             }
 
             body.scrollTop = body.scrollHeight;
@@ -99,11 +125,9 @@ export class AIService {
     static appendMessage(container, text, type) {
         const div = document.createElement('div');
         div.className = `msg-${type}`;
-        div.textContent = text;
+        div.innerHTML = text;
         container.appendChild(div);
         container.scrollTop = container.scrollHeight;
         return div;
     }
 }
-
-
