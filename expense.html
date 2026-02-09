@@ -12,13 +12,25 @@
 </head>
 
 <body>
+  <!-- Diagnostic Script to catch hanging or failing modules -->
+  <script>
+    window.onerror = function (msg, url, lineNo, columnNo, error) {
+      console.error(msg, url, lineNo, columnNo, error);
+      alert('Script Error: ' + msg + '\nCheck Console (F12) for details.');
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function (event) {
+      console.error('Unhandled rejection:', event.reason);
+      alert('Async Error: ' + event.reason);
+    });
+  </script>
   <!-- Header -->
   <header class="header">
     <div class="container">
       <div class="header-content animate-fade-in-down">
         <div class="brand">
           <div class="brand-logo">
-            <img src="img/logo.jpg" alt="E" onerror="this.src=''; this.parentElement.innerText='E'">
+            <img src="img/logo.jpg" alt="E" onerror="if(this.parentElement){this.parentElement.innerText='E'}">
           </div>
           <div class="brand-text">
             <h1>EXPENSIFY</h1>
@@ -27,12 +39,16 @@
         </div>
 
         <div class="user-section" id="auth-section">
-          <div id="user-info" class="user-section">
+          <div id="logged-out-view" class="row">
+            <button id="login-btn" class="btn btn-primary">Sign in with Google</button>
+          </div>
+          <div id="user-info" class="user-section hidden">
             <div class="user-info">
               <span id="user-name" class="user-name"></span>
               <span id="user-email" class="user-email"></span>
             </div>
             <img id="user-photo" class="user-photo" src="" alt="Profile" />
+            <button id="logout-btn" class="btn btn-ghost">Logout</button>
           </div>
         </div>
       </div>
@@ -200,6 +216,8 @@
           <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; font-weight: 600;">BUDGET STATUS</div>
           <div id="budget-status" style="font-size: 1.5rem; font-weight: 700; color: #EF4444;">Not Set</div>
         </div>
+        <!-- Missing Month Income Total -->
+        <div id="month-income-total" class="hidden"></div>
       </div>
     </section>
 
@@ -268,7 +286,7 @@
   <!-- THE NEW RADIANT AI CHAT UI -->
   <div id="ai-chat-fab" class="ai-fab">
     <div class="brand-logo" style="width: 32px; height: 32px; font-size: 1rem;">
-      <img src="img/logo.png" alt="E" onerror="this.src=''; this.parentElement.innerText='E'">
+      <img src="img/logo.png" alt="E" onerror="if(this.parentElement){this.parentElement.innerText='E'}">
     </div>
   </div>
 
@@ -276,7 +294,7 @@
     <div class="ai-chat-header">
       <div class="ai-chat-title">
         <div class="brand-logo" style="width: 24px; height: 24px; font-size: 0.85rem; border-radius: 6px;">
-          <img src="img/logo.png" alt="E" onerror="this.src=''; this.parentElement.innerText='E'">
+          <img src="img/logo.png" alt="E" onerror="if(this.parentElement){this.parentElement.innerText='E'}">
         </div>
         <span>Finance AI</span>
       </div>

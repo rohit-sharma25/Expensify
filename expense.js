@@ -19,25 +19,30 @@ let categoryChart = null;
 let trendChart = null;
 
 // DOM
+// DOM
 const userName = document.getElementById('user-name');
 const userPhoto = document.getElementById('user-photo');
+const userEmail = document.getElementById('user-email');
+const loggedOutView = document.getElementById('logged-out-view');
+const userInfoSection = document.getElementById('user-info');
+const loginBtn = document.getElementById('login-btn');
+const logoutBtn = document.getElementById('logout-btn');
 const form = document.getElementById("expense-form");
 const descInput = document.getElementById("expense-desc");
 const amountInput = document.getElementById("expense-amount");
 const categorySelect = document.getElementById("expense-category");
 const subCategorySelect = document.getElementById("expense-subcategory");
 const tableBody = document.getElementById("expense-table-body");
-const summary = document.getElementById("expense-summary");
 const budgetInput = document.getElementById("budget-input");
 const budgetSave = document.getElementById("budget-save");
 const budgetWarning = document.getElementById("budget-warning");
 const toggleExpense = document.getElementById("btn-expense");
 const toggleIncome = document.getElementById("btn-income");
 
-// AI Chat elements
-const fab = document.getElementById('ai-fab');
+// AI Chat elements (Updated IDs to match expense.html)
+const fab = document.getElementById('ai-chat-fab');
 const chatPopup = document.getElementById('ai-chat-popup');
-const chatClose = document.getElementById('ai-close');
+const chatClose = document.getElementById('ai-chat-close');
 const chatInput = document.getElementById('ai-chat-input');
 const chatSend = document.getElementById('ai-chat-send');
 const chatBody = document.getElementById('ai-chat-body');
@@ -64,11 +69,16 @@ categorySelect.addEventListener('change', function () {
 AuthService.onUserChange((user) => {
   currentUser = user;
   if (user) {
-    userName.textContent = user.displayName;
-    userPhoto.src = user.photoURL;
+    if (userInfoSection) userInfoSection.classList.remove('hidden');
+    if (loggedOutView) loggedOutView.classList.add('hidden');
+    if (userName) userName.textContent = user.displayName;
+    if (userEmail) userEmail.textContent = user.email;
+    if (userPhoto) userPhoto.src = user.photoURL;
   } else {
-    userName.textContent = AuthService.isLocalOnly() ? "Guest Mode" : "Sign in";
-    userPhoto.src = "https://ui-avatars.com/api/?name=Guest";
+    if (userInfoSection) userInfoSection.classList.add('hidden');
+    if (loggedOutView) loggedOutView.classList.remove('hidden');
+    if (userName) userName.textContent = AuthService.isLocalOnly() ? "Guest Mode" : "Sign in";
+    if (userPhoto) userPhoto.src = "https://ui-avatars.com/api/?name=Guest";
   }
 
   // Reactive Subscriptions
@@ -315,11 +325,11 @@ form.onsubmit = async (e) => {
   await DBService.saveData(currentUser?.uid, 'finances', id, expenseData);
 
   // Clear form
-  descInput.value = "";
-  amountInput.value = "";
-  categorySelect.value = "";
-  subCategorySelect.value = "";
-  dateInput.value = "";
+  if (descInput) descInput.value = "";
+  if (amountInput) amountInput.value = "";
+  if (categorySelect) categorySelect.value = "";
+  if (subCategorySelect) subCategorySelect.value = "";
+  if (dateInput) dateInput.value = "";
 
   // Show success message
   alert('Entry added successfully!');
@@ -390,15 +400,20 @@ AIService.init({
 
 
 // Calendar History (Simplified for v2)
-document.getElementById('open-calendar').onclick = () => {
-  document.getElementById('calendar-overlay').classList.remove('hidden');
+document.getElementById('open-calendar')?.addEventListener('click', () => {
+  document.getElementById('calendar-overlay')?.classList.remove('hidden');
   renderCalendar();
-};
-document.getElementById('cal-close').onclick = () => document.getElementById('calendar-overlay').classList.add('hidden');
+});
+
+document.getElementById('cal-close')?.addEventListener('click', () => {
+  document.getElementById('calendar-overlay')?.classList.add('hidden');
+});
 
 function renderCalendar() {
   const grid = document.getElementById('calendar-grid');
   const title = document.getElementById('cal-title');
+  if (!grid || !title) return;
+
   const y = currentCal.getFullYear();
   const m = currentCal.getMonth();
   title.textContent = new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(currentCal);
@@ -413,7 +428,7 @@ function renderCalendar() {
     const day = document.createElement('div');
     day.className = 'day';
     day.innerHTML = `<span style="font-size:0.7rem;">${d}</span>`;
-    const spent = finances.filter(f => f.type === 'expense' && f.dateISO === iso).reduce((s, f) => s + f.amount, 0);
+    const spent = (finances || []).filter(f => f.type === 'expense' && f.dateISO === iso).reduce((s, f) => s + f.amount, 0);
     if (spent > 0) {
       const p = document.createElement('div');
       p.className = 'pill spend';
@@ -422,5 +437,20 @@ function renderCalendar() {
     grid.appendChild(day);
   }
 }
-document.getElementById('cal-prev').onclick = () => { currentCal.setMonth(currentCal.getMonth() - 1); renderCalendar(); };
-document.getElementById('cal-next').onclick = () => { currentCal.setMonth(currentCal.getMonth() + 1); renderCalendar(); };
+
+document.getElementById('cal-prev')?.addEventListener('click', () => {
+  currentCal.setMonth(currentCal.getMonth() - 1);
+  renderCalendar();
+});
+
+document.getElementById('cal-next')?.addEventListener('click', () => {
+  currentCal.setMonth(currentCal.getMonth() + 1);
+  renderCalendar();
+});
+
+// Auth Action Listeners
+if (loginBtn) loginBtn.onclick = () => AuthService.login();
+if (logoutBtn) logoutBtn.onclick = () => {
+  AuthService.setLocalOnly(false);
+  AuthService.logout().then(() => location.reload());
+};
