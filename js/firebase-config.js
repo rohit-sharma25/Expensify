@@ -4,12 +4,12 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCc22Lttv8BEq4QSw_mrI_NwXJHackYD3w",
-  authDomain: "personal-tracker-1f02e.firebaseapp.com",
-  projectId: "personal-tracker-1f02e",
-  storageBucket: "personal-tracker-1f02e.firebasestorage.app",
-  messagingSenderId: "924625298797",
-  appId: "1:924625298797:web:7c9c9e684b111c32762664"
+  apiKey: "AIzaSyC56buKWd2U8IRfKfBYYWjkS7rwhZogGok",
+  authDomain: "expensify-55ed8.firebaseapp.com",
+  projectId: "expensify-55ed8",
+  storageBucket: "expensify-55ed8.firebasestorage.app",
+  messagingSenderId: "499931843480",
+  appId: "1:499931843480:web:c92f62ee596b5c015839ed"
 };
 
 const app = initializeApp(firebaseConfig);
