@@ -204,14 +204,23 @@
       <!-- Monthly Expenses Chart -->
       <div class="chart-card">
         <div class="chart-header">
-          <h3 class="chart-title">📊 Monthly Expenses</h3>
+          <h3 class="chart-title">📊 Monthly Statistics</h3>
           <div class="chart-filter">
             <button class="filter-btn active" data-period="6m">6 Month</button>
             <button class="filter-btn" data-period="1y">1 Year</button>
           </div>
         </div>
-        <div class="chart-container">
-          <canvas id="monthly-chart"></canvas>
+        <div style="display: flex; gap: 20px; align-items: stretch; min-height: 300px;">
+          <div class="chart-filter" id="monthly-chart-type-filter"
+            style="display: flex; flex-direction: column; background: rgba(0,0,0,0.05); border-radius:12px; padding: 6px; gap: 8px;">
+            <button class="filter-btn active" data-type="expense"
+              style="padding: 12px; font-size: 0.8rem; writing-mode: vertical-lr; transform: rotate(180deg); flex: 1;">Expenses</button>
+            <button class="filter-btn" data-type="income"
+              style="padding: 12px; font-size: 0.8rem; writing-mode: vertical-lr; transform: rotate(180deg); flex: 1;">Income</button>
+          </div>
+          <div class="chart-container" style="flex: 1; height: 300px;">
+            <canvas id="monthly-chart"></canvas>
+          </div>
         </div>
       </div>
 
@@ -235,11 +244,11 @@
     <!-- Recent Expenses Section -->
     <section class="expenses-section animate-fade-in-up stagger-3">
       <div class="section-header">
-        <h3 class="section-title">📋 Recent Expenses</h3>
+        <h3 class="section-title" id="recent-transactions-title">📋 Recent Expenses</h3>
         <div class="row">
           <button class="filter-btn active" data-filter="all">All</button>
           <button class="filter-btn" data-filter="recent">Recent</button>
-          <a href="expense.html" class="btn btn-primary">+ Add Expense</a>
+          <a href="expense.html" class="btn btn-primary">+ Add Entry</a>
         </div>
       </div>
 
@@ -252,6 +261,8 @@
             <th>Sub Category</th>
             <th>Date</th>
             <th>Mode</th>
+            <th>Description</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="recent-expenses-body">
@@ -326,6 +337,8 @@
     let monthlyChart = null;
     let categoryChart = null;
     let currentUser = null;
+    let currentChartType = 'expense';
+    let currentFilter = 'all';
 
     // Update time
     function updateTime() {
@@ -379,7 +392,7 @@
         contextData.finances = data;
         renderDashboard(contextData.finances, contextData.budget);
         renderCharts(contextData.finances);
-        renderRecentExpenses(contextData.finances);
+        renderRecentExpenses(contextData.finances, currentFilter, currentChartType);
         renderSubscriptions(contextData.finances);
       });
 
@@ -400,7 +413,36 @@
           document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const period = btn.dataset.period;
-          renderMonthlyChart(contextData.finances, period === '1y' ? 12 : 6);
+          renderMonthlyChart(contextData.finances, period === '1y' ? 12 : 6, currentChartType);
+        };
+      });
+
+      // Chart Type Listeners
+      document.querySelectorAll('#monthly-chart-type-filter [data-type]').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('#monthly-chart-type-filter [data-type]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentChartType = btn.dataset.type;
+          const activePeriod = document.querySelector('[data-period].active')?.dataset.period || '6m';
+          renderMonthlyChart(contextData.finances, activePeriod === '1y' ? 12 : 6, currentChartType);
+          renderCategoryChart(contextData.finances, currentChartType);
+          renderRecentExpenses(contextData.finances, currentFilter, currentChartType);
+
+          // Update Titles
+          const recentTitle = document.getElementById('recent-transactions-title');
+          if (recentTitle) {
+            recentTitle.textContent = currentChartType === 'expense' ? '📋 Recent Expenses' : '💰 Recent Income';
+          }
+        };
+      });
+
+      // Filter Recent Expenses Listeners
+      document.querySelectorAll('.expenses-section .filter-btn[data-filter]').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.expenses-section .filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = btn.dataset.filter;
+          renderRecentExpenses(contextData.finances, currentFilter, currentChartType);
         };
       });
     }
@@ -503,11 +545,11 @@
 
     function renderCharts(finances) {
       const activePeriod = document.querySelector('[data-period].active')?.dataset.period || '6m';
-      renderMonthlyChart(finances, activePeriod === '1y' ? 12 : 6);
-      renderCategoryChart(finances);
+      renderMonthlyChart(finances, activePeriod === '1y' ? 12 : 6, currentChartType);
+      renderCategoryChart(finances, currentChartType);
     }
 
-    function renderMonthlyChart(finances, numMonths = 6) {
+    function renderMonthlyChart(finances, numMonths = 6, type = 'expense') {
       const ctx = document.getElementById('monthly-chart');
       if (!ctx) return;
 
@@ -522,10 +564,14 @@
         months.push(monthName);
 
         const monthTotal = finances
-          .filter(f => f.type === 'expense' && f.dateISO.startsWith(monthStr))
+          .filter(f => f.type === type && f.dateISO.startsWith(monthStr))
           .reduce((sum, f) => sum + f.amount, 0);
         data.push(monthTotal);
       }
+
+      const chartLabel = type === 'expense' ? 'Expenses' : 'Income';
+      const chartColor = type === 'expense' ? 'rgba(239, 68, 68, 0.8)' : 'rgba(16, 185, 129, 0.8)';
+      const chartBorder = type === 'expense' ? '#EF4444' : '#10B981';
 
       if (monthlyChart) monthlyChart.destroy();
 
@@ -534,10 +580,10 @@
         data: {
           labels: months,
           datasets: [{
-            label: 'Expenses',
+            label: chartLabel,
             data: data,
-            backgroundColor: 'rgba(91, 108, 242, 0.8)',
-            borderColor: '#5B6CF2',
+            backgroundColor: chartColor,
+            borderColor: chartBorder,
             borderWidth: 2,
             borderRadius: 8,
           }]
@@ -574,7 +620,7 @@
       });
     }
 
-    function renderCategoryChart(finances) {
+    function renderCategoryChart(finances, type = 'expense') {
       const ctx = document.getElementById('category-chart');
       if (!ctx) return;
 
@@ -586,19 +632,23 @@
         'Shopping': '#F59E0B',
         'Traveling': '#06B6D4',
         'Miscellaneous': '#6B7280',
-        'Bill & Subscription': '#EF4444'
+        'Bill & Subscription': '#EF4444',
+        'Peoples': '#3B82F6',
+        'LLM Models': '#8B5CF6'
       };
 
       finances
-        .filter(f => f.type === 'expense')
+        .filter(f => f.type === type)
         .forEach(f => {
-          const cat = f.category || 'Miscellaneous';
+          const cat = f.category || (type === 'income' ? 'Salary/Income' : 'Miscellaneous');
           categories[cat] = (categories[cat] || 0) + f.amount;
         });
 
       const labels = Object.keys(categories);
       const data = Object.values(categories);
-      const colors = labels.map(l => categoryColors[l] || '#6B7280');
+
+      // Dynamic color generation for unknown categories
+      const colors = labels.map(l => categoryColors[l] || `hsl(${Math.random() * 360}, 70%, 50%)`);
 
       if (categoryChart) categoryChart.destroy();
 
@@ -646,21 +696,33 @@
       `).join('');
     }
 
-    function renderRecentExpenses(finances) {
+    function renderRecentExpenses(finances, filter = 'all', type = 'expense') {
       const tbody = document.getElementById('recent-expenses-body');
       if (!tbody) return;
 
       tbody.innerHTML = '';
 
       if (!finances || finances.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--muted);">No expenses yet</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted);">No ${type} entries yet</td></tr>`;
         return;
       }
 
-      const recentExpenses = finances
-        .filter(f => f.type === 'expense')
-        .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO))
-        .slice(0, 5);
+      let filteredExpenses = finances
+        .filter(f => f.type === type);
+
+      if (filteredExpenses.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--muted);">No ${type} entries yet</td></tr>`;
+        return;
+      }
+
+      if (filter === 'recent') {
+        filteredExpenses = filteredExpenses
+          .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO))
+          .slice(0, 5);
+      } else {
+        filteredExpenses = filteredExpenses
+          .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
+      }
 
       const categoryEmoji = {
         'Food & Grocery': '🍔',
@@ -668,22 +730,40 @@
         'Shopping': '🛍️',
         'Traveling': '✈️',
         'Miscellaneous': '📦',
-        'Bill & Subscription': '💳'
+        'Bill & Subscription': '💳',
+        'Peoples': '👥',
+        'LLM Models': '🤖'
       };
 
-      recentExpenses.forEach(expense => {
+      const amountColor = type === 'expense' ? 'var(--danger)' : 'var(--success)';
+      const deleteBg = type === 'expense' ? 'rgba(239,68,68,0.05)' : 'rgba(16,185,129,0.05)';
+      const deleteColor = type === 'expense' ? '#EF4444' : '#10B981';
+      const deleteBorder = type === 'expense' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
+
+      filteredExpenses.forEach((expense, index) => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border)';
 
-        const emoji = categoryEmoji[expense.category] || '💸';
+        const emoji = categoryEmoji[expense.category] || (type === 'income' ? '💰' : '💸');
 
         tr.innerHTML = `
-          <td style="padding:12px;">${emoji}</td>
-          <td style="padding:12px; font-weight:500;">${expense.desc}</td>
-          <td style="padding:12px; color:var(--muted); font-size:0.85rem;">${expense.category || 'N/A'}</td>
-          <td style="padding:12px; font-weight:600; color:var(--danger);">₹${Number(expense.amount).toFixed(2)}</td>
+          <td style="padding:12px; color:var(--muted); font-size:0.85rem;">${index + 1}</td>
           <td style="padding:12px;">
-            <button class="btn-delete" data-id="${expense.id}" style="background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.2); padding:6px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition: all 0.2s;">
+            <span style="font-weight:700; color:${amountColor}; font-size:0.95rem;">${type === 'income' ? '+' : '-'} ₹${Number(expense.amount).toFixed(2)}</span>
+          </td>
+          <td style="padding:12px; color:var(--text); font-size:0.85rem;">${emoji} ${expense.category || (type === 'income' ? 'Income' : 'N/A')}</td>
+          <td style="padding:12px; color:var(--muted); font-size:0.85rem;">${expense.subCategory || '-'}</td>
+          <td style="padding:12px; color:var(--muted); font-size:0.85rem;">${expense.dateISO}</td>
+          <td style="padding:12px;">
+            <span style="padding: 4px 10px; background: rgba(0,0,0,0.05); border-radius: 99px; font-size: 0.75rem; font-weight:600; color:var(--primary);">
+              ${expense.mode || (type === 'income' ? 'Direct' : 'Cash')}
+            </span>
+          </td>
+          <td style="padding:12px; color:var(--text); font-size:0.85rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${expense.desc}
+          </td>
+          <td style="padding:12px;">
+            <button class="btn-delete" data-id="${expense.id}" style="background:${deleteBg}; color:${deleteColor}; border:1px solid ${deleteBorder}; padding:6px 14px; border-radius:8px; cursor:pointer; font-size:0.8rem; font-weight:700; transition: all 0.2s;">
               Delete
             </button>
           </td>
