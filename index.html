@@ -63,6 +63,16 @@
       </div>
     </section>
 
+    <!-- AI Smart Dashboard -->
+    <div id="ai-smart-dashboard" class="animate-fade-in-up" style="margin-bottom: 24px; display: none;">
+      <div class="minimal-insight-card">
+        <span class="insight-icon">✨</span>
+        <div id="ai-dashboard-insight" class="insight-text">
+          <span class="typing-dots">Analyzing spending...</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Dashboard Grid -->
     <div class="dashboard-grid animate-fade-in-up stagger-1">
       <!-- Account Balance Card -->
@@ -286,7 +296,7 @@
 
   <!-- THE NEW RADIANT AI CHAT UI -->
   <div id="ai-chat-fab" class="ai-fab">
-    <span>✨</span>
+    <span>🤖</span>
   </div>
 
   <div id="ai-chat-popup" class="ai-chat-popup hidden">
@@ -312,6 +322,8 @@
     import { AuthService } from './js/auth-service.js';
     import { DBService } from './js/db-service.js';
     import { AIService } from './js/ai-service.js';
+    import { calculateBudgetTrajectory, analyzeSpendingByCategory } from './js/analytics.js';
+    import { createTrajectoryChart, destroyChart } from './js/chart-utils.js';
 
     // DOM Elements
     const loginBtn = document.getElementById('login-btn');
@@ -336,6 +348,7 @@
     let contextData = { finances: [], budget: null };
     let monthlyChart = null;
     let categoryChart = null;
+    let lastAiUpdate = 0;
     let currentUser = null;
     let currentChartType = 'expense';
     let currentFilter = 'all';
@@ -394,12 +407,14 @@
         renderCharts(contextData.finances);
         renderRecentExpenses(contextData.finances, currentFilter, currentChartType);
         renderSubscriptions(contextData.finances);
+        updateAISmartDashboard();
       });
 
       DBService.subscribe(uid, 'monthlyBudget', (data) => {
         const settings = data.find(d => d.id === 'settings');
         contextData.budget = settings ? settings.value : null;
         renderDashboard(contextData.finances, contextData.budget);
+        updateAISmartDashboard();
       });
 
       DBService.subscribe(uid, 'goals', (data) => {
@@ -547,6 +562,52 @@
       const activePeriod = document.querySelector('[data-period].active')?.dataset.period || '6m';
       renderMonthlyChart(finances, activePeriod === '1y' ? 12 : 6, currentChartType);
       renderCategoryChart(finances, currentChartType);
+    }
+
+    async function updateAISmartDashboard() {
+      const dashboard = document.getElementById('ai-smart-dashboard');
+      const insightEl = document.getElementById('ai-dashboard-insight');
+      if (!dashboard || !insightEl) return;
+
+      if (!contextData.budget || contextData.finances.length === 0) {
+        dashboard.style.display = 'none';
+        return;
+      }
+
+      dashboard.style.display = 'block';
+
+      // Throttle AI updates (max once every 30 seconds)
+      const now = Date.now();
+      if (now - lastAiUpdate < 30000) return;
+      lastAiUpdate = now;
+
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const spent = contextData.finances.filter(f => f.type === 'expense' && f.dateISO.startsWith(currentMonth)).reduce((s, f) => s + f.amount, 0);
+      const trajectory = calculateBudgetTrajectory(contextData.finances, contextData.budget);
+      const categories = analyzeSpendingByCategory(contextData.finances);
+      const topCategory = Object.keys(categories).length > 0 ? Object.entries(categories).sort((a, b) => b[1] - a[1])[0][0] : 'N/A';
+
+      // Update card status class
+      const card = dashboard.querySelector('.minimal-insight-card');
+      if (card) {
+        card.classList.remove('status-ok', 'status-alert');
+        card.classList.add(trajectory.isOverBudget ? 'status-alert' : 'status-ok');
+      }
+
+      try {
+        const insight = await AIService.generateDashboardInsight({
+          budget: contextData.budget,
+          spent: spent,
+          trajectory: trajectory,
+          topCategory: topCategory
+        });
+
+        if (insight) {
+          insightEl.innerHTML = insight;
+        }
+      } catch (err) {
+        console.error("Dashboard AI Insight Error:", err);
+      }
     }
 
     function renderMonthlyChart(finances, numMonths = 6, type = 'expense') {

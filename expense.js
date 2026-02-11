@@ -2,8 +2,8 @@
 import { AuthService } from './js/auth-service.js';
 import { DBService } from './js/db-service.js';
 import { AIService } from './js/ai-service.js';
-import { createDonutChart, createLineChart, destroyChart } from './js/chart-utils.js';
-import { calculateFinanceStats, analyzeSpendingByCategory, getSpendingTrend } from './js/analytics.js';
+import { createDonutChart, createLineChart, createTrajectoryChart, destroyChart } from './js/chart-utils.js';
+import { calculateFinanceStats, analyzeSpendingByCategory, getSpendingTrend, calculateBudgetTrajectory } from './js/analytics.js';
 
 const TIMEZONE = "Asia/Kolkata";
 const todayStr = () => new Intl.DateTimeFormat("en-CA", { timeZone: TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -17,6 +17,8 @@ let currentUser = null;
 // Chart instances
 let categoryChart = null;
 let trendChart = null;
+let trajectoryChart = null;
+let lastAiUpdate = 0;
 
 // DOM
 // DOM
@@ -87,6 +89,7 @@ AuthService.onUserChange((user) => {
     renderFinances();
     renderAnalytics();
     renderCharts();
+    updateAISmartDashboard();
   });
 
   DBService.subscribe(user?.uid, 'monthlyBudget', (data) => {
@@ -104,6 +107,7 @@ AuthService.onUserChange((user) => {
     updateBudgetUI();
     updateFinanceSummary();
     renderAnalytics();
+    updateAISmartDashboard();
   });
 
 });
@@ -289,6 +293,52 @@ function renderCharts() {
   }
 }
 
+async function updateAISmartDashboard() {
+  const dashboard = document.getElementById('ai-smart-dashboard');
+  const insightEl = document.getElementById('ai-dashboard-insight');
+  if (!dashboard || !insightEl) return;
+
+  if (!monthlyBudget) {
+    dashboard.style.display = 'none';
+    return;
+  }
+
+  dashboard.style.display = 'block';
+
+  // Throttle AI updates (max once every 30 seconds to prevent API abuse)
+  const now = Date.now();
+  if (now - lastAiUpdate < 30000) return;
+  lastAiUpdate = now;
+
+  const currentMonth = todayStr().slice(0, 7);
+  const spent = finances.filter(f => f.type === 'expense' && f.dateISO.startsWith(currentMonth)).reduce((s, f) => s + f.amount, 0);
+  const trajectory = calculateBudgetTrajectory(finances, monthlyBudget);
+  const categories = analyzeSpendingByCategory(finances);
+  const topCategory = Object.keys(categories).length > 0 ? Object.entries(categories).sort((a, b) => b[1] - a[1])[0][0] : 'N/A';
+
+  // Update card status class
+  const card = dashboard.querySelector('.minimal-insight-card');
+  if (card) {
+    card.classList.remove('status-ok', 'status-alert');
+    card.classList.add(trajectory.isOverBudget ? 'status-alert' : 'status-ok');
+  }
+
+  try {
+    const insight = await AIService.generateDashboardInsight({
+      budget: monthlyBudget,
+      spent: spent,
+      trajectory: trajectory,
+      topCategory: topCategory
+    });
+
+    if (insight) {
+      insightEl.innerHTML = insight;
+    }
+  } catch (err) {
+    console.error("Dashboard AI Insight Error:", err);
+  }
+}
+
 form.onsubmit = async (e) => {
   e.preventDefault();
   const desc = descInput.value.trim();
@@ -385,8 +435,18 @@ if (budgetSave) {
 
 
 
-toggleExpense.onclick = () => { toggleExpense.classList.add('active'); toggleIncome.classList.remove('active'); };
-toggleIncome.onclick = () => { toggleIncome.classList.add('active'); toggleExpense.classList.remove('active'); };
+toggleExpense.onclick = () => {
+  toggleExpense.classList.add('active');
+  toggleIncome.classList.remove('active');
+  const title = document.getElementById('entry-form-title');
+  if (title) title.innerHTML = '➕ Add New Expense';
+};
+toggleIncome.onclick = () => {
+  toggleIncome.classList.add('active');
+  toggleExpense.classList.remove('active');
+  const title = document.getElementById('entry-form-title');
+  if (title) title.innerHTML = '💰 Add New Income';
+};
 
 // NEW AI CHAT INITIALIZATION
 AIService.init({

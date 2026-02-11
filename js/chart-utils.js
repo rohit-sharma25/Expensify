@@ -288,6 +288,63 @@ export function createComparisonChart(canvas, datasets, labels) {
 }
 
 /**
+ * Create a specialized trajectory chart (Actual vs Ideal)
+ */
+export function createTrajectoryChart(canvas, data) {
+    const ctx = canvas.getContext('2d');
+
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Actual Spending',
+                    data: data.actual,
+                    borderColor: '#6c5ce7',
+                    backgroundColor: 'rgba(108, 92, 231, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5
+                },
+                {
+                    label: 'Ideal Trajectory',
+                    data: data.ideal,
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderDash: [5, 5],
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            ...defaultChartOptions,
+            plugins: {
+                ...defaultChartOptions.plugins,
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#8b8ca1', font: { size: 10 } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#8b8ca1', font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+/**
  * Destroy chart instance safely
  */
 export function destroyChart(chartInstance) {

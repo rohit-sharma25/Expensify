@@ -64,8 +64,8 @@
   <main class="container">
     <!-- Add Expense Form -->
     <section class="expenses-section animate-fade-in-up">
-      <div class="section-header">
-        <h3 class="section-title">➕ Add New Expense</h3>
+      <h3 class="section-title" id="entry-form-title" style="text-align: center;">➕ Add New Entry</h3>
+      <div class="section-header" style="justify-content: flex-start; gap: 24px;">
         <div class="row">
           <button type="button" id="btn-expense" class="filter-btn active">Expense</button>
           <button type="button" id="btn-income" class="filter-btn">Income</button>
@@ -221,7 +221,17 @@
       </div>
     </section>
 
-    <!-- Charts Section -->
+    <!-- AI Smart Dashboard -->
+    <div id="ai-smart-dashboard" class="animate-fade-in-up" style="margin-top: 32px; display: none;">
+      <div class="minimal-insight-card">
+        <span class="insight-icon">✨</span>
+        <div id="ai-dashboard-insight" class="insight-text">
+          <span class="typing-dots">Analyzing spending...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cha                                                                                                                                            rts Section -->
     <div class="charts-section animate-fade-in-up stagger-1" style="margin-top: 32px;">
       <!-- Spending Trend -->
       <div class="chart-card">
@@ -285,17 +295,14 @@
 
   <!-- THE NEW RADIANT AI CHAT UI -->
   <div id="ai-chat-fab" class="ai-fab">
-    <div class="brand-logo" style="width: 32px; height: 32px; font-size: 1rem;">
-      <img src="img/logo.png" alt="E" onerror="if(this.parentElement){this.parentElement.innerText='E'}">
-    </div>
+        <span>🤖</span>
+     </div>
   </div>
 
-  <div id="ai-chat-popup" class="ai-chat-popup hidden">
+ <div id="ai-chat-popup" class="ai-chat-popup hidden">
     <div class="ai-chat-header">
       <div class="ai-chat-title">
-        <div class="brand-logo" style="width: 24px; height: 24px; font-size: 0.85rem; border-radius: 6px;">
-          <img src="img/logo.png" alt="E" onerror="if(this.parentElement){this.parentElement.innerText='E'}">
-        </div>
+        <span>🤖</span>
         <span>Finance AI</span>
       </div>
       <button id="ai-chat-close" class="btn-icon"

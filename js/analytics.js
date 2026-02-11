@@ -150,4 +150,43 @@ export function generateInsights(habitStats, financeStats) {
     return insights;
 }
 
+/**
+ * Calculate budget trajectory data for the current month
+ */
+export function calculateBudgetTrajectory(finances, monthlyBudget) {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const lastDayToProcess = today.getDate();
 
+    const dailySpending = new Array(daysInMonth).fill(0);
+    const monthPrefix = today.toISOString().slice(0, 7);
+
+    finances.filter(f => f.type === 'expense' && f.dateISO.startsWith(monthPrefix)).forEach(f => {
+        const day = new Date(f.dateISO).getDate();
+        if (day <= daysInMonth) {
+            dailySpending[day - 1] += f.amount;
+        }
+    });
+
+    const labels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const actualSpending = [];
+    let cumulative = 0;
+
+    for (let i = 0; i < lastDayToProcess; i++) {
+        cumulative += dailySpending[i];
+        actualSpending.push(cumulative);
+    }
+
+    const idealTrajectory = labels.map(day => {
+        return monthlyBudget ? (monthlyBudget / daysInMonth) * day : 0;
+    });
+
+    return {
+        labels,
+        actual: actualSpending,
+        ideal: idealTrajectory,
+        isOverBudget: monthlyBudget ? actualSpending[actualSpending.length - 1] > idealTrajectory[lastDayToProcess - 1] : false
+    };
+}

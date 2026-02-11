@@ -130,4 +130,55 @@ export class AIService {
         container.scrollTop = container.scrollHeight;
         return div;
     }
+
+    static async generateDashboardInsight(context) {
+        if (!CONFIG.GROQ_API_KEY) return null;
+
+        const budget = context.budget || 0;
+        const spent = context.spent || 0;
+        const trajectory = context.trajectory || {};
+        const isOverBudget = trajectory.isOverBudget;
+
+        const systemPrompt = `
+            You are "Expensify AI Dashboard". 
+            Generate a single, precise, and actionable financial insight (MAX 25 words).
+            Context:
+            - Monthly Budget: ₹${budget}
+            - Spent so far: ₹${spent}
+            - Over daily budget trajectory: ${isOverBudget ? 'YES' : 'NO'}
+            - Top category overspending: ${context.topCategory || 'N/A'}
+            
+            Instruction:
+            - Start directly with the insight. 
+            - Use a professional yet punchy tone.
+            - Example: "Your dining is 20% above target. Reduce entertainment next week to balance."
+        `;
+
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${CONFIG.GROQ_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "llama-3.1-8b-instant", // Using a faster model for dashboard insights
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: "Generate dashboard insight." }
+                    ],
+                    temperature: 0.5,
+                    max_tokens: 100
+                })
+            });
+
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            return data.choices[0].message.content.trim();
+        } catch (error) {
+            console.error("Dashboard AI Error:", error);
+            return null;
+        }
+    }
 }
