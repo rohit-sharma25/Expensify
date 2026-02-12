@@ -63,34 +63,78 @@
       </div>
     </section>
 
-    <!-- AI Smart Dashboard -->
+    <!-- AI Multi-State Banner -->
     <div id="ai-smart-dashboard" class="animate-fade-in-up" style="margin-bottom: 24px; display: none;">
-      <div class="minimal-insight-card">
-        <span class="insight-icon">✨</span>
-        <div id="ai-dashboard-insight" class="insight-text">
-          <span class="typing-dots">Analyzing spending...</span>
+      <div class="insight-banner">
+        <span class="insight-icon">💼</span>
+        <div class="insight-text">
+          <div
+            style="font-size: 0.65rem; text-transform: uppercase; font-weight: 800; color: #5B6CF2; margin-bottom: 2px;">
+            GROQ LLAMA 3.3 INTELLIGENCE</div>
+          <div id="ai-dashboard-insight">
+            <span class="typing-dots">Analyzing your financial behavior...</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Dashboard Grid -->
+    <!-- GEN-3 Financial Intelligence Grid -->
     <div class="dashboard-grid animate-fade-in-up stagger-1">
+      <!-- Financial Health Card -->
+      <div class="stat-card health-card" id="health-card">
+        <div class="stat-card-header">
+          <div class="stat-card-icon">🏥</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span id="ai-verified-badge" class="health-status"
+              style="background: rgba(91, 108, 242, 0.1); color: var(--primary); font-size: 0.6rem; display: none;">AI
+              VERIFIED</span>
+            <span id="health-status" class="health-status health-stable">STABLE</span>
+          </div>
+        </div>
+        <div class="stat-card-body">
+          <h3>Health Score</h3>
+          <div class="risk-value" id="risk-score">0</div>
+          <div class="risk-label">Risk Rating: <span id="risk-label">Low</span></div>
+          <div id="ai-risk-reasoning"
+            style="font-size: 0.7rem; color: var(--muted); margin-top: 8px; font-style: italic; display: none;"></div>
+        </div>
+      </div>
+
+      <!-- Burn Rate Card -->
+      <div class="stat-card burn-rate-card">
+        <div class="stat-card-header">
+          <div class="stat-card-icon">🔥</div>
+          <span class="stat-card-badge" style="background: rgba(0,0,0,0.05);">BURN RATE</span>
+        </div>
+        <div class="stat-card-body">
+          <h3>Daily Spending</h3>
+          <div class="stat-card-value" id="burn-rate">₹0</div>
+          <div class="burn-bar-container">
+            <div id="burn-bar" class="burn-bar" style="width: 0%"></div>
+          </div>
+          <p style="font-size: 0.75rem; color: var(--muted);" id="burn-text">Calculating monthly velocity...</p>
+        </div>
+      </div>
+
       <!-- Account Balance Card -->
       <div class="stat-card">
         <div class="stat-card-header">
           <div class="stat-card-icon">💳</div>
-          <span class="stat-card-badge" style="background: rgba(91, 108, 242, 0.15); color: #5B6CF2;">BALANCE</span>
+          <span class="stat-card-badge" style="background: rgba(0,0,0,0.05);">BALANCE</span>
         </div>
         <div class="stat-card-body">
           <h3>Account Balance</h3>
           <div class="stat-card-value" id="account-balance">₹0.00</div>
-          <div class="stat-card-trend trend-up" id="balance-trend">
-            <span>↑</span>
-            <span>+12% from last month</span>
+          <div class="stat-card-trend trend-up">
+            <span>🚀</span>
+            <span>Net Financial Standing</span>
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Performance Metrics Grid -->
+    <div class="dashboard-grid animate-fade-in-up stagger-2" style="margin-top: -12px;">
       <!-- Monthly Expenses Card -->
       <div class="stat-card">
         <div class="stat-card-header">
@@ -145,7 +189,7 @@
         </div>
       </div>
 
-      <!-- Goal Card with Edit Functionality -->
+      <!-- Goal Card -->
       <div class="stat-card">
         <div class="stat-card-header">
           <div class="stat-card-icon">🎯</div>
@@ -207,6 +251,7 @@
           </div>
         </div>
       </div>
+    </div>
     </div>
 
     <!-- Charts Section -->
@@ -345,7 +390,7 @@
     const chatSend = document.getElementById('ai-chat-send');
     const chatBody = document.getElementById('ai-chat-body');
 
-    let contextData = { finances: [], budget: null };
+    let contextData = { finances: [], budget: null, engineState: { state: {}, risks: {}, behavior: {} } };
     let monthlyChart = null;
     let categoryChart = null;
     let lastAiUpdate = 0;
@@ -407,14 +452,27 @@
         renderCharts(contextData.finances);
         renderRecentExpenses(contextData.finances, currentFilter, currentChartType);
         renderSubscriptions(contextData.finances);
-        updateAISmartDashboard();
       });
 
       DBService.subscribe(uid, 'monthlyBudget', (data) => {
         const settings = data.find(d => d.id === 'settings');
         contextData.budget = settings ? settings.value : null;
         renderDashboard(contextData.finances, contextData.budget);
-        updateAISmartDashboard();
+      });
+
+      // GEN-3 Real-time Engine Updates
+      DBService.subscribe(uid, 'engineState', (data) => {
+        const state = data.find(d => d.id === 'financialState');
+        const risks = data.find(d => d.id === 'riskSignals');
+        const behavior = data.find(d => d.id === 'behaviorProfile');
+
+        if (state) updateBurnRateUI(state);
+        if (risks) updateHealthUI(risks);
+        if (state && risks && behavior) {
+          updateAISmartDashboard(state, risks, behavior);
+          contextData.engineState = { state, risks, behavior };
+          document.getElementById('ai-verified-badge').style.display = 'inline-block';
+        }
       });
 
       DBService.subscribe(uid, 'goals', (data) => {
@@ -546,16 +604,16 @@
         .filter(f => f.category === 'Investment')
         .reduce((sum, f) => sum + f.amount, 0);
 
-      // Update dashboard
-      document.getElementById('account-balance').textContent = `₹${(monthIncome - monthExpenses).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      document.getElementById('monthly-expenses').textContent = `₹${monthExpenses.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      // Update dashboard with defensive checks
+      const balanceEl = document.getElementById('account-balance');
+      const expensesEl = document.getElementById('monthly-expenses');
+      const incomeEl = document.getElementById('monthly-income');
+      const investmentEl = document.getElementById('total-investment');
 
-      const monthlyIncomeEl = document.getElementById('monthly-income');
-      if (monthlyIncomeEl) {
-        monthlyIncomeEl.textContent = `₹${monthIncome.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      }
-
-      document.getElementById('total-investment').textContent = `₹${totalInvestment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      if (balanceEl) balanceEl.textContent = `₹${(monthIncome - monthExpenses).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      if (expensesEl) expensesEl.textContent = `₹${monthExpenses.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      if (incomeEl) incomeEl.textContent = `₹${monthIncome.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      if (investmentEl) investmentEl.textContent = `₹${totalInvestment.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
     function renderCharts(finances) {
@@ -564,42 +622,63 @@
       renderCategoryChart(finances, currentChartType);
     }
 
-    async function updateAISmartDashboard() {
+    function updateHealthUI(risks) {
+      if (!risks || typeof risks.riskScore === 'undefined') return;
+      const scoreEl = document.getElementById('risk-score');
+      const labelEl = document.getElementById('risk-label');
+      const statusEl = document.getElementById('health-status');
+
+      if (!scoreEl) return;
+
+      scoreEl.textContent = risks.riskScore;
+
+      let label = 'Low';
+      let statusClass = 'health-stable';
+      if (risks.riskScore > 70) { label = 'High'; statusClass = 'health-critical'; }
+      else if (risks.riskScore > 30) { label = 'Moderate'; statusClass = 'health-warning'; }
+
+      labelEl.textContent = label;
+      statusEl.textContent = label.toUpperCase();
+      statusEl.className = `health-status ${statusClass}`;
+    }
+
+    function updateBurnRateUI(state) {
+      if (!state || typeof state.burnRatePerDay === 'undefined') return;
+      const burnEl = document.getElementById('burn-rate');
+      const barEl = document.getElementById('burn-bar');
+      const textEl = document.getElementById('burn-text');
+
+      if (!burnEl) return;
+
+      burnEl.textContent = `₹${Math.round(state.burnRatePerDay)}`;
+      const velocity = Math.min(100, (state.monthExpenses / (contextData.budget || state.monthExpenses || 1)) * 100);
+      barEl.style.width = `${velocity}%`;
+      textEl.textContent = `Projected: ₹${Math.round(state.projectedEndBalance)} end-of-month.`;
+    }
+
+    async function updateAISmartDashboard(state, risks, behavior) {
       const dashboard = document.getElementById('ai-smart-dashboard');
       const insightEl = document.getElementById('ai-dashboard-insight');
       if (!dashboard || !insightEl) return;
 
-      if (!contextData.budget || contextData.finances.length === 0) {
+      if (!contextData.budget) {
         dashboard.style.display = 'none';
         return;
       }
 
       dashboard.style.display = 'block';
 
-      // Throttle AI updates (max once every 30 seconds)
+      // Throttle AI updates
       const now = Date.now();
       if (now - lastAiUpdate < 30000) return;
       lastAiUpdate = now;
 
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const spent = contextData.finances.filter(f => f.type === 'expense' && f.dateISO.startsWith(currentMonth)).reduce((s, f) => s + f.amount, 0);
-      const trajectory = calculateBudgetTrajectory(contextData.finances, contextData.budget);
-      const categories = analyzeSpendingByCategory(contextData.finances);
-      const topCategory = Object.keys(categories).length > 0 ? Object.entries(categories).sort((a, b) => b[1] - a[1])[0][0] : 'N/A';
-
-      // Update card status class
-      const card = dashboard.querySelector('.minimal-insight-card');
-      if (card) {
-        card.classList.remove('status-ok', 'status-alert');
-        card.classList.add(trajectory.isOverBudget ? 'status-alert' : 'status-ok');
-      }
-
       try {
         const insight = await AIService.generateDashboardInsight({
           budget: contextData.budget,
-          spent: spent,
-          trajectory: trajectory,
-          topCategory: topCategory
+          state,
+          risks,
+          behavior
         });
 
         if (insight) {

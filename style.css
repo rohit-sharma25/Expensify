@@ -72,6 +72,11 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
+
+  /* Health Levels */
+  --health-critical: #EF4444;
+  --health-warning: #F59E0B;
+  --health-stable: #10B981;
 }
 
 /* ========== RESET & BASE ========== */
@@ -283,12 +288,17 @@ body {
 /* ========== STAT CARDS ========== */
 
 .stat-card {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   padding: var(--spacing-lg);
-  backdrop-filter: blur(20px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   position: relative;
   overflow: hidden;
 }
@@ -307,9 +317,9 @@ body {
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(0, 0, 0, 0.2);
-  box-shadow: var(--shadow-lg), var(--primary-glow);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  border-color: rgba(91, 108, 242, 0.2);
 }
 
 .stat-card:hover::before {
@@ -329,27 +339,29 @@ body {
 }
 
 .stat-card-badge {
-  font-size: 0.75rem;
   padding: 4px 10px;
   border-radius: 99px;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-size: 0.65rem;
+  font-weight: 800;
   letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .stat-card-body h3 {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   margin-bottom: var(--spacing-xs);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .stat-card-value {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: var(--spacing-xs);
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin: 6px 0;
+  line-height: 1.1;
   background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -797,6 +809,93 @@ body {
 .ai-chat-send:hover {
   background: #333;
   transform: scale(1.05);
+}
+
+/* ========== GEN-3 ARCHITECTURE UI ========== */
+
+.health-card {
+  position: relative;
+  overflow: hidden;
+  border-left: 4px solid var(--primary);
+}
+
+.health-status {
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.health-stable {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--health-stable);
+}
+
+.health-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--health-warning);
+}
+
+.health-critical {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--health-critical);
+}
+
+.burn-rate-card {
+  height: 100%;
+}
+
+.burn-bar-container {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.burn-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.insight-banner {
+  background: #000;
+  color: #fff;
+  padding: 20px 24px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+  border-bottom: 3px solid #333;
+}
+
+.insight-banner .insight-icon {
+  font-size: 1.5rem;
+}
+
+.insight-banner .insight-text {
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.risk-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.risk-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 

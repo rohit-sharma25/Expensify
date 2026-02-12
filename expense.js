@@ -2,6 +2,7 @@
 import { AuthService } from './js/auth-service.js';
 import { DBService } from './js/db-service.js';
 import { AIService } from './js/ai-service.js';
+import { FinancialEngine } from './js/financial-engine.js';
 import { createDonutChart, createLineChart, createTrajectoryChart, destroyChart } from './js/chart-utils.js';
 import { calculateFinanceStats, analyzeSpendingByCategory, getSpendingTrend, calculateBudgetTrajectory } from './js/analytics.js';
 
@@ -19,6 +20,7 @@ let categoryChart = null;
 let trendChart = null;
 let trajectoryChart = null;
 let lastAiUpdate = 0;
+let currentEngineState = { state: {}, risks: {}, behavior: {} };
 
 // DOM
 // DOM
@@ -86,10 +88,25 @@ AuthService.onUserChange((user) => {
   // Reactive Subscriptions
   DBService.subscribe(user?.uid, 'finances', (data) => {
     finances = data;
+
+    // GEN-3 Architecture: Run Engines
+    const state = FinancialEngine.calculateState(finances, monthlyBudget);
+    const risks = FinancialEngine.runRiskEngine(state, monthlyBudget);
+    const behavior = FinancialEngine.runBehaviorModel(finances);
+
+    // Save state objects for AI and UI (Async)
+    const uid = AuthService.isLocalOnly() ? null : user?.uid;
+    DBService.saveData(uid, 'engineState', 'financialState', state);
+    DBService.saveData(uid, 'engineState', 'riskSignals', risks);
+    DBService.saveData(uid, 'engineState', 'behaviorProfile', behavior);
+
+    // Register state locally for Chat
+    currentEngineState = { state, risks, behavior };
+
     renderFinances();
     renderAnalytics();
     renderCharts();
-    updateAISmartDashboard();
+    updateAISmartDashboard(state, risks, behavior);
   });
 
   DBService.subscribe(user?.uid, 'monthlyBudget', (data) => {
@@ -107,7 +124,12 @@ AuthService.onUserChange((user) => {
     updateBudgetUI();
     updateFinanceSummary();
     renderAnalytics();
-    updateAISmartDashboard();
+
+    // Recalculate with new budget
+    const state = FinancialEngine.calculateState(finances, monthlyBudget);
+    const risks = FinancialEngine.runRiskEngine(state, monthlyBudget);
+    const behavior = FinancialEngine.runBehaviorModel(finances);
+    updateAISmartDashboard(state, risks, behavior);
   });
 
 });
@@ -293,7 +315,7 @@ function renderCharts() {
   }
 }
 
-async function updateAISmartDashboard() {
+async function updateAISmartDashboard(state, risks, behavior) {
   const dashboard = document.getElementById('ai-smart-dashboard');
   const insightEl = document.getElementById('ai-dashboard-insight');
   if (!dashboard || !insightEl) return;
@@ -305,30 +327,17 @@ async function updateAISmartDashboard() {
 
   dashboard.style.display = 'block';
 
-  // Throttle AI updates (max once every 30 seconds to prevent API abuse)
+  // Throttle AI updates
   const now = Date.now();
   if (now - lastAiUpdate < 30000) return;
   lastAiUpdate = now;
 
-  const currentMonth = todayStr().slice(0, 7);
-  const spent = finances.filter(f => f.type === 'expense' && f.dateISO.startsWith(currentMonth)).reduce((s, f) => s + f.amount, 0);
-  const trajectory = calculateBudgetTrajectory(finances, monthlyBudget);
-  const categories = analyzeSpendingByCategory(finances);
-  const topCategory = Object.keys(categories).length > 0 ? Object.entries(categories).sort((a, b) => b[1] - a[1])[0][0] : 'N/A';
-
-  // Update card status class
-  const card = dashboard.querySelector('.minimal-insight-card');
-  if (card) {
-    card.classList.remove('status-ok', 'status-alert');
-    card.classList.add(trajectory.isOverBudget ? 'status-alert' : 'status-ok');
-  }
-
   try {
     const insight = await AIService.generateDashboardInsight({
       budget: monthlyBudget,
-      spent: spent,
-      trajectory: trajectory,
-      topCategory: topCategory
+      state,
+      risks,
+      behavior
     });
 
     if (insight) {
@@ -456,7 +465,11 @@ AIService.init({
   input: document.getElementById('ai-chat-input'),
   send: document.getElementById('ai-chat-send'),
   body: document.getElementById('ai-chat-body')
-}, () => ({ finances, budget: monthlyBudget }));
+}, () => ({
+  finances,
+  budget: monthlyBudget,
+  engineState: currentEngineState
+}));
 
 
 // Calendar History (Simplified for v2)

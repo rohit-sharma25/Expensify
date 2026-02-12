@@ -6,30 +6,25 @@ export class AIService {
             return "Please add your Groq API Key in `js/config.js` to enable the AI assistant.";
         }
 
-        // Financial Context Extraction
-        const today = new Date().toISOString().slice(0, 7);
-        const finances = context.finances || [];
-        const budget = context.budget || 0;
-        const spent = finances
-            .filter(f => f.type === 'expense' && f.dateISO.startsWith(today))
-            .reduce((sum, f) => sum + f.amount, 0);
-
-        const recentExpenses = finances
-            .filter(f => f.type === 'expense')
-            .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO))
-            .slice(0, 10);
+        const { finances = [], budget = 0, engineState = {} } = context;
+        const { state = {}, risks = {}, behavior = {} } = engineState;
 
         const systemPrompt = `
-            You are "Expensify AI", a premium, friendly financial advisor. 
-            User Context:
+            You are "Expensify AI", a premium, friendly financial advisor.
+            
+            CRITICAL DASHBOARD FACTS (Verify all answers against these):
             - Monthly Budget: ₹${budget.toLocaleString('en-IN')}
-            - Total Spent this Month: ₹${spent.toLocaleString('en-IN')}
-            - Recent Transactions: ${JSON.stringify(recentExpenses.map(e => ({ desc: e.desc, amount: e.amount, cat: e.category })))}
+            - Current Spending: ₹${(state.monthExpenses || 0).toLocaleString('en-IN')}
+            - Daily Spending (Burn Rate): ₹${(state.burnRatePerDay || 0).toLocaleString('en-IN')}
+            - Health Score: ${risks.riskScore || 0}/100
+            - Risk Level: ${state.safetyLevel || 'Stable'}
+            - Behavior Pattern: ${behavior.categorySpikes?.length > 0 ? behavior.categorySpikes.join(', ') : 'Stable'}
             
             Instructions:
+            - You MUST use the values above when asked about finances. Never calculate your own totals.
             - Keep responses concise (max 3-4 sentences).
             - Use emojis and markdown (**bold**).
-            - Based on the data above, give specific advice if asked.
+            - If asked "Why is my health score X?", explain based on risk factors like overspending velocity.
         `;
 
         try {
@@ -134,24 +129,27 @@ export class AIService {
     static async generateDashboardInsight(context) {
         if (!CONFIG.GROQ_API_KEY) return null;
 
-        const budget = context.budget || 0;
-        const spent = context.spent || 0;
-        const trajectory = context.trajectory || {};
-        const isOverBudget = trajectory.isOverBudget;
+        const { budget, state, risks, behavior } = context;
 
         const systemPrompt = `
-            You are "Expensify AI Dashboard". 
-            Generate a single, precise, and actionable financial insight (MAX 25 words).
-            Context:
-            - Monthly Budget: ₹${budget}
-            - Spent so far: ₹${spent}
-            - Over daily budget trajectory: ${isOverBudget ? 'YES' : 'NO'}
-            - Top category overspending: ${context.topCategory || 'N/A'}
+            You are "Expensify Financial Manager", a high-end personal wealth advisor.
+            Your goal is to provide a single, actionable, and professional financial insight.
             
-            Instruction:
-            - Start directly with the insight. 
-            - Use a professional yet punchy tone.
-            - Example: "Your dining is 20% above target. Reduce entertainment next week to balance."
+            Context:
+            - Budget: ₹${budget}
+            - Spent: ₹${state.monthExpenses}
+            - Safety Level: ${state.safetyLevel}
+            - Risk Score: ${risks.riskScore}/100
+            - Behavior: ${behavior.categorySpikes.length > 0 ? 'Spikes in ' + behavior.categorySpikes.join(', ') : 'Stable'}
+            - Impulse Pattern: ${behavior.impulsePattern ? 'Detected' : 'None'}
+            
+            Rules:
+            1. MAX 20 WORDS.
+            2. Be extremely specific and actionable.
+            3. No generic advice like "save more".
+            4. Sound like a premium human manager.
+            
+            Example: "Your dining velocity is 2x average. Cut luxury spending by ₹2k this week to stay on track."
         `;
 
         try {
@@ -162,10 +160,10 @@ export class AIService {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model: "llama-3.1-8b-instant", // Using a faster model for dashboard insights
+                    model: "llama-3.3-70b-versatile",
                     messages: [
                         { role: "system", content: systemPrompt },
-                        { role: "user", content: "Generate dashboard insight." }
+                        { role: "user", content: "Provide manager insight based on the exact context provided." }
                     ],
                     temperature: 0.5,
                     max_tokens: 100
