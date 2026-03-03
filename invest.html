@@ -388,26 +388,14 @@
                     </div>
                 </div>
 
-        </div>
-        </form>
-    </div>
-    </div>
-
-    <!-- Ticker Details Modal -->
-    <div id="ticker-details-modal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1100; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
-        <div
-            style="background:#fff; border-radius:24px; width:90%; max-width:800px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); position: relative;">
-            <button onclick="document.getElementById('ticker-details-modal').style.display='none'"
-                style="position:absolute; right:20px; top:20px; background:none; border:none; font-size:2rem; cursor:pointer; color:var(--muted); z-index:10;">&times;</button>
-
-            <div id="ticker-details-content" style="padding:40px;">
-                <!-- Content Injected Dynamically -->
-                <div style="text-align:center; padding:40px;">
-                    <div class="loading-spinner"></div>
-                    <p style="margin-top:20px; color:var(--muted);">Fetching deep insights from Massive.com...</p>
+                <div style="display:flex; gap:12px; margin-top:24px;">
+                    <button type="submit" class="btn btn-primary"
+                        style="flex:1; background:var(--groww-green); border:none;">Save Investment</button>
+                    <button type="button" class="btn btn-ghost"
+                        onclick="document.getElementById('add-holding-modal').style.display='none'"
+                        style="flex:1;">Cancel</button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
@@ -477,50 +465,31 @@
                     </div>
                 </div>
 
-                <!-- Asset Allocation Donut Chart -->
+                <!-- Asset Allocation -->
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3 class="chart-title">🎯 Asset Allocation</h3>
+                        <h3 class="chart-title">📊 Asset Allocation</h3>
                     </div>
-                    <div class="chart-container"
-                        style="height: 300px; display: flex; align-items: center; justify-content: center;">
-                        <div id="asset-allocation-chart" style="width: 100%;"></div>
+                    <div class="chart-container" style="height: 250px;">
+                        <div id="allocation-chart"></div>
                     </div>
                 </div>
 
-                <!-- Passive Income & AI Insight Column -->
-                <div style="display: flex; flex-direction: column; gap: 20px;">
-                    <!-- Passive Income Tracker -->
-                    <div class="stat-card" style="background: #fff; color: var(--text); min-height: 150px;">
-                        <div class="stat-card-header">
-                            <div class="stat-card-icon">💸</div>
-                            <span class="stat-card-badge"
-                                style="background: rgba(0, 208, 156, 0.1); color: var(--groww-green);">ANNUAL
-                                ESTIMATE</span>
-                        </div>
-                        <div class="stat-card-body">
-                            <h3>Passive Income</h3>
-                            <div class="stat-card-value" id="passive-income-value" style="font-size: 1.8rem;">₹0</div>
-                            <p style="font-size: 0.75rem; color: var(--muted); margin-top: 4px;">Dividends & Interest
-                                (Est.)</p>
-                        </div>
+                <!-- Passive Income Estimate -->
+                <div class="stat-card"
+                    style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.2);">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon">💸</div>
                     </div>
-
-                    <!-- AI Wealth Insight -->
-                    <div class="stat-card"
-                        style="background: linear-gradient(135deg, #1A1A1A 0%, #404040 100%); color: #fff; flex: 1;">
-                        <div class="stat-card-header">
-                            <div class="stat-card-icon">🤖</div>
-                            <span class="stat-card-badge" style="background: var(--groww-green); color: #000;">AI
-                                ADVISOR</span>
+                    <div class="stat-card-body" style="color: #333;">
+                        <h3>Passive Income Estimate</h3>
+                        <div style="font-size: 2rem; font-weight: 800; color: #10B981; margin: 12px 0;">
+                            ₹<span id="monthly-passive">0</span><small style="font-size: 0.8rem; opacity: 0.7;">
+                                /mo</small>
                         </div>
-                        <div class="stat-card-body">
-                            <h3>Wealth Insight</h3>
-                            <p id="ai-wealth-insight"
-                                style="font-size: 0.85rem; line-height: 1.5; margin-top: 8px; opacity: 0.9;">
-                                Analyzing metrics to provide guidance...
-                            </p>
-                        </div>
+                        <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">
+                            Projected monthly yield from your FD and Savings accounts.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -538,12 +507,11 @@
 
         <!-- Market Tab -->
         <div id="discover" class="tab-content animate-fade-in-up">
-            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="section-header">
                 <h3 class="section-title">Market Discovery</h3>
-                <span style="font-size:0.75rem; color:var(--muted);">Powered by Massive.com</span>
             </div>
-            <div class="instrument-grid" id="market-discovery-list">
-                <!-- Gold/Silver + Popular US Stocks Injected Here -->
+            <div class="instrument-grid" id="gold-list">
+                <!-- Market Highlights Injected Here -->
             </div>
         </div>
 
@@ -603,7 +571,6 @@
             investments: { holdings: [], sipPlans: [], fdAccounts: [], rdAccounts: [], prices: {} }
         };
         let portfolioChart = null;
-        let allocationChart = null;
         let portfolioHistory = [];
         let currentUser = null;
         let activeModalTab = 'tab-stock';
@@ -968,38 +935,14 @@
             // Update API status display
             updateAPIStatus();
 
-            updateAIInsight(metrics, savings);
-            renderMarketDiscovery();
+            // renderPortfolioChart(metrics.totalValue + savings.totalSaved); // Now handled by DB subscription
+            renderGoldList();
             renderStocksList();
             renderSavingsList();
             updateMarketCards(contextData.investments.prices);
-
-            // Advanced Features Update
-            updateAllocationUI();
-            updatePassiveIncomeUI();
-        }
-
-        function updateAllocationUI() {
-            const allocation = InvestmentEngine.calculateAssetAllocation(
-                contextData.investments.holdings,
-                contextData.investments.sipPlans,
-                contextData.investments.fdAccounts,
-                contextData.investments.rdAccounts,
-                contextData.investments.prices
-            );
-            renderAllocationChart(allocation);
-        }
-
-        function updatePassiveIncomeUI() {
-            const income = InvestmentEngine.calculatePassiveIncome(
-                contextData.investments.holdings,
-                contextData.investments.sipPlans,
-                contextData.investments.fdAccounts,
-                contextData.investments.rdAccounts,
-                contextData.investments.prices
-            );
-            const el = document.getElementById('passive-income-stat');
-            if (el) el.textContent = `₹${Math.round(income).toLocaleString('en-IN')}`;
+            renderAllocationChart(metrics, savings);
+            updatePassiveIncomeUI(savings);
+            updateAIInsight(metrics, savings);
         }
 
         function updateMarketCards(prices) {
@@ -1007,6 +950,7 @@
             const silver = prices['SILVER'];
 
             if (gold) {
+                // show two decimals rather than rounding to nearest rupee
                 document.getElementById('price-gold').textContent = `₹${PriceService.formatGoldPrice(gold.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 const el = document.getElementById('change-gold');
                 el.textContent = gold.changePercent;
@@ -1030,6 +974,7 @@
         function updateTickerUI(prices) {
             const ticker = document.getElementById('price-ticker');
             if (!ticker) return;
+            // Show top 5 movers + Gold/Silver
             const items = Object.values(prices).slice(0, 10);
 
             if (items.length === 0) {
@@ -1039,6 +984,7 @@
 
             ticker.innerHTML = items.map(data => {
                 if (!data) return '';
+                // Try to guess name from id if symbol is missing, or use ID
                 const symbol = data.id || '---';
                 const price = data.price || 0;
                 const change = data.changePercent || '0%';
@@ -1059,9 +1005,11 @@
             const chartEl = document.getElementById('portfolio-performance-chart');
             if (!chartEl) return;
 
+            // Normalize data: historyData is [{x, y}]
             const seriesData = historyData || [];
             if (seriesData.length === 0) return;
 
+            // Calculate min/max for Y-axis scaling to make fluctuation visible
             const prices = seriesData.map(d => d.y);
             const minPrice = Math.min(...prices) * 0.999;
             const maxPrice = Math.max(...prices) * 1.001;
@@ -1072,7 +1020,7 @@
                     type: 'area',
                     height: 350,
                     fontFamily: 'Inter, sans-serif',
-                    animations: { enabled: false },
+                    animations: { enabled: false }, // Disabled animations for better performance
                     toolbar: { show: false },
                     zoom: { enabled: false }
                 },
@@ -1089,7 +1037,7 @@
                     }
                 },
                 grid: {
-                    show: false,
+                    show: false, // Cleaner look
                     padding: { top: 0, right: 0, bottom: 0, left: 10 }
                 },
                 xaxis: {
@@ -1105,7 +1053,7 @@
                 },
                 yaxis: {
                     show: true,
-                    min: minPrice,
+                    min: minPrice, // Auto-scale to show small fluctuations
                     max: maxPrice,
                     labels: {
                         formatter: (value) => '₹' + Math.round(value).toLocaleString('en-IN'),
@@ -1118,7 +1066,9 @@
                 }
             };
 
+            // Initial Render
             if (!portfolioChart) {
+                // Ensure div
                 if (chartEl.tagName === 'CANVAS') {
                     const div = document.createElement('div');
                     div.id = 'portfolio-performance-chart';
@@ -1129,63 +1079,41 @@
                 }
                 portfolioChart.render();
             } else {
+                // Only update series data, not options (more efficient)
                 portfolioChart.updateSeries([{ data: seriesData }]);
             }
         }
 
-        function renderAllocationChart(allocation) {
-            const chartEl = document.getElementById('asset-allocation-chart');
+        let allocationChart = null;
+        function renderAllocationChart(metrics, savings) {
+            const chartEl = document.getElementById('allocation-chart');
             if (!chartEl) return;
 
+            const allocation = InvestmentEngine.calculateAllocation(contextData.investments.holdings, savings, contextData.investments.prices);
+
             const options = {
-                series: [allocation.equity, allocation.fixedIncome, allocation.commodities],
-                chart: {
-                    type: 'donut',
-                    height: 280,
-                    animations: { enabled: true }
-                },
-                labels: ['Equity', 'Fixed Income', 'Commodities'],
-                colors: ['#00D09C', '#5B6CF2', '#F59E0B'],
+                series: Object.values(allocation),
+                labels: Object.keys(allocation),
+                chart: { type: 'donut', height: 250 },
+                colors: ['#5B6CF2', '#FFD700', '#10B981'],
                 dataLabels: { enabled: false },
-                legend: {
-                    position: 'bottom',
-                    fontFamily: 'Inter',
-                    labels: { colors: '#6B7280' }
-                },
+                legend: { position: 'bottom', fontSize: '10px' },
                 plotOptions: {
-                    pie: {
-                        donut: {
-                            size: '75%',
-                            labels: {
-                                show: true,
-                                name: { show: true, fontSize: '12px', color: '#6B7280' },
-                                value: {
-                                    show: true,
-                                    fontSize: '20px',
-                                    fontWeight: 700,
-                                    color: '#000',
-                                    formatter: (val) => `${Math.round(val)}%`
-                                },
-                                total: {
-                                    show: true,
-                                    label: 'Assets',
-                                    fontSize: '12px',
-                                    color: '#6B7280',
-                                    formatter: () => '100%'
-                                }
-                            }
-                        }
-                    }
-                },
-                stroke: { width: 0 }
+                    pie: { donut: { size: '65%', labels: { show: true, total: { show: true, color: '#333' } } } }
+                }
             };
 
-            if (allocationChart) {
-                allocationChart.updateOptions(options);
-            } else {
+            if (!allocationChart) {
                 allocationChart = new ApexCharts(chartEl, options);
                 allocationChart.render();
+            } else {
+                allocationChart.updateSeries(Object.values(allocation));
             }
+        }
+
+        function updatePassiveIncomeUI(savings) {
+            const data = InvestmentEngine.calculatePassiveIncome(contextData.investments.fdAccounts, contextData.investments.sipPlans);
+            document.getElementById('monthly-passive').textContent = Math.round(data.monthlyEstimated).toLocaleString('en-IN');
         }
 
         async function updateAIInsight(metrics, savings) {
@@ -1197,6 +1125,7 @@
         function renderStocksList() {
             const container = document.getElementById('stocks-list');
             if (!container) return;
+            // Filter only true stocks
             const holdings = contextData.investments.holdings.filter(h => h.type === 'STOCK');
             if (holdings.length === 0) {
                 container.innerHTML = `
@@ -1229,11 +1158,8 @@
                                 <span style="font-size:0.75rem; color:var(--muted);">Market Value</span>
                                 <div style="font-weight:800; font-size: 1.1rem;">₹${Math.round(currentVal).toLocaleString('en-IN')}</div>
                             </div>
-                            <div style="text-align:right;">
-                                <div class="return-badge ${returns >= 0 ? '' : 'negative'}" style="margin-bottom:8px; display:inline-block;">
-                                    ${returns >= 0 ? '+' : ''}${returnPerc.toFixed(1)}%
-                                </div>
-                                <button onclick="showTickerDetails('${h.symbol}')" class="btn btn-ghost" style="display:block; font-size:0.7rem; padding:4px 8px; border-radius:6px; border:1px solid var(--groww-green); color:var(--groww-green);">Deep Insights</button>
+                            <div class="return-badge ${returns >= 0 ? '' : 'negative'}">
+                                ${returns >= 0 ? '+' : ''}${returnPerc.toFixed(1)}%
                             </div>
                         </div>
                     </div>
@@ -1241,131 +1167,50 @@
             }).join('');
         }
 
-        window.showTickerDetails = async function (symbol) {
-            const modal = document.getElementById('ticker-details-modal');
-            const content = document.getElementById('ticker-details-content');
-            modal.style.display = 'flex';
+        function renderGoldList() {
+            const container = document.getElementById('gold-list');
+            if (!container) return;
+            const goldPrice = contextData.investments.prices['GOLD'] ? contextData.investments.prices['GOLD'].price : 0;
+            const silverPrice = contextData.investments.prices['SILVER'] ? contextData.investments.prices['SILVER'].price : 0;
+            const goldIsLive = contextData.investments.prices['GOLD'] ? contextData.investments.prices['GOLD'].isLive : false;
+            const silverIsLive = contextData.investments.prices['SILVER'] ? contextData.investments.prices['SILVER'].isLive : false;
 
-            content.innerHTML = `
-                <div style="text-align:center; padding:40px;">
-                    <div style="width:40px; height:40px; border:4px solid var(--groww-green); border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto;"></div>
-                    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-                    <p style="margin-top:20px; color:var(--muted);">Fetching intelligence for ${symbol}...</p>
+            const goldHolding = contextData.investments.holdings.find(h => h.symbol === 'GOLD');
+            const silverHolding = contextData.investments.holdings.find(h => h.symbol === 'SILVER');
+
+            // Calculate value
+            const goldVal = goldHolding ? goldHolding.quantity * goldPrice : 0;
+            const silverVal = silverHolding ? silverHolding.quantity * silverPrice : 0;
+
+            container.innerHTML = `
+                <div class="instrument-card" style="position: relative;">
+                  ${goldHolding ? `<button onclick="deleteInvestment('${goldHolding.id}', 'holdings')" style="position: absolute; right: 8px; top: 8px; background: rgba(255,0,0,0.1); color: var(--danger); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;" title="Delete Gold">🗑️</button>` : ''}
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding-right: 20px;">
+                    <h4>Gold (24K)</h4> 
+                    ${goldHolding ? `<span class="return-badge">Owning ₹${Math.round(goldVal).toLocaleString()}</span>` : ''}
+                  </div>
+                  <p style="font-size:0.8rem; color:var(--muted);">Digital Gold • Safe Haven</p>
+                  <p style="font-size:0.7rem; color:var(--muted); margin:4px 0 12px 0;">${goldIsLive ? `🟢 ${contextData.investments.prices['GOLD'].source || 'Live'}` : '🟡 Cached Data'}</p>
+                  <div style="margin-top:12px;">
+                    <span style="font-size:1.5rem; font-weight:800;">₹${Math.round(PriceService.formatGoldPrice(goldPrice)).toLocaleString('en-IN')}</span> <span style="font-size:0.75rem; color:var(--muted);">/10g</span>
+                    ${goldHolding ? `<div style="margin-top:8px; font-weight:600; color:var(--groww-green);">Holdings: ${goldHolding.quantity} g</div>` : ''}
+                  </div>
+                </div>
+
+                <div class="instrument-card" style="position: relative;">
+                  ${silverHolding ? `<button onclick="deleteInvestment('${silverHolding.id}', 'holdings')" style="position: absolute; right: 8px; top: 8px; background: rgba(255,0,0,0.1); color: var(--danger); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;" title="Delete Silver">🗑️</button>` : ''}
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding-right: 20px;">
+                    <h4>Silver</h4> 
+                    ${silverHolding ? `<span class="return-badge">Owning ₹${Math.round(silverVal).toLocaleString()}</span>` : ''}
+                  </div>
+                  <p style="font-size:0.8rem; color:var(--muted);">Industrial • Precious</p>
+                  <p style="font-size:0.7rem; color:var(--muted); margin:4px 0 12px 0;">${silverIsLive ? `🟢 ${contextData.investments.prices['SILVER'].source || 'Live'}` : '🟡 Cached Data'}</p>
+                  <div style="margin-top:12px;">
+                    <span style="font-size:1.5rem; font-weight:800;">₹${Math.round(PriceService.formatSilverPrice(silverPrice)).toLocaleString('en-IN')}</span> <span style="font-size:0.75rem; color:var(--muted);">/kg</span>
+                    ${silverHolding ? `<div style="margin-top:8px; font-weight:600; color:var(--groww-green);">Holdings: ${silverHolding.quantity} g</div>` : ''}
+                  </div>
                 </div>
             `;
-
-            try {
-                const [details, news] = await Promise.all([
-                    PriceService.fetchTickerDetails(symbol),
-                    PriceService.fetchTickerNews(symbol)
-                ]);
-
-                if (!details) {
-                    content.innerHTML = `<p style="text-align:center; padding:40px;">No detailed data available for ${symbol} at this time. (Requires Massive.com Pro for some assets)</p>`;
-                    return;
-                }
-
-                let newsHtml = news.length > 0 ? news.map(n => `
-                    <div style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid var(--border-light);">
-                        <a href="${n.url}" target="_blank" style="text-decoration:none; color:var(--text); font-weight:700; display:block; margin-bottom:4px;">${n.title}</a>
-                        <p style="font-size:0.8rem; color:var(--muted); line-height:1.4;">${n.summary ? n.summary.substring(0, 150) + '...' : 'No summary available.'}</p>
-                        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.7rem; color:var(--muted);">
-                            <span>${n.author || 'Massive News'}</span>
-                            <span>${new Date(n.published).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                `).join('') : '<p style="color:var(--muted);">No recent news found.</p>';
-
-                content.innerHTML = `
-                    <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px;">
-                        ${details.logo ? `<img src="${details.logo}" style="width:64px; height:64px; border-radius:12px; object-fit:contain;" onerror="this.style.display='none'">` : ''}
-                        <div>
-                            <h2 style="margin:0; font-size:2rem;">${symbol}</h2>
-                            ${details.homepage ? `<a href="${details.homepage}" target="_blank" style="color:var(--groww-green); font-size:0.9rem; text-decoration:none;">${details.homepage}</a>` : ''}
-                        </div>
-                    </div>
-
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:40px;">
-                        <div style="background:var(--groww-bg); padding:15px; border-radius:12px;">
-                            <span style="font-size:0.75rem; color:var(--muted); font-weight:700;">MARKET CAP</span>
-                            <div style="font-size:1.2rem; font-weight:800; margin-top:5px;">$${(details.marketCap / 1e9).toFixed(2)}B</div>
-                        </div>
-                        <div style="background:var(--groww-bg); padding:15px; border-radius:12px;">
-                            <span style="font-size:0.75rem; color:var(--muted); font-weight:700;">EMPLOYEES</span>
-                            <div style="font-size:1.2rem; font-weight:800; margin-top:5px;">${details.employees ? details.employees.toLocaleString() : 'N/A'}</div>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom:40px;">
-                        <h3 style="margin-bottom:15px; border-left:4px solid var(--groww-green); padding-left:12px;">Company Description</h3>
-                        <p style="line-height:1.6; color:var(--text); opacity:0.8;">${details.description || 'No description available.'}</p>
-                    </div>
-
-                    <div>
-                        <h3 style="margin-bottom:15px; border-left:4px solid var(--groww-green); padding-left:12px;">Latest News Insights</h3>
-                        <div style="margin-top:20px;">${newsHtml}</div>
-                    </div>
-                `;
-
-            } catch (err) {
-                console.error(err);
-                content.innerHTML = `<p style="text-align:center; color:var(--danger); padding:40px;">Failed to load deep insights. Please try again later.</p>`;
-            }
-        };
-
-        async function renderMarketDiscovery() {
-            const container = document.getElementById('market-discovery-list');
-            if (!container) return;
-
-            const popularUS = ['AAPL', 'MSFT', 'GOOGL', 'TSLA'];
-            const prices = contextData.investments.prices;
-
-            let html = '';
-
-            // 1. Precious Metals
-            const metals = ['GOLD', 'SILVER'];
-            metals.forEach(sym => {
-                const data = prices[sym];
-                if (!data) return;
-                const price = sym === 'GOLD' ? PriceService.formatGoldPrice(data.price) : PriceService.formatSilverPrice(data.price);
-                const unit = sym === 'GOLD' ? '/10g' : '/kg';
-                html += `
-                    <div class="instrument-card">
-                        <div style="display:flex; justify-content:space-between;">
-                            <h4 style="margin:0;">${sym === 'GOLD' ? 'Gold (24K)' : 'Silver'}</h4>
-                            <span class="ticker-change ${data.changePercent && data.changePercent.startsWith('-') ? 'down' : 'up'}">${data.changePercent || '0%'}</span>
-                        </div>
-                        <p style="font-size:0.75rem; color:var(--muted); margin-top:4px;">${sym === 'GOLD' ? 'Digital gold' : 'Industrial metal'}</p>
-                        <div style="margin-top:15px;">
-                            <span style="font-size:1.3rem; font-weight:800;">₹${price.toLocaleString()}</span>
-                            <span style="font-size:0.7rem; color:var(--muted);">${unit}</span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            // 2. Popular US Stocks
-            popularUS.forEach(sym => {
-                const data = prices[sym] || { price: 0, changePercent: '0%' };
-                html += `
-                    <div class="instrument-card">
-                        <div style="display:flex; justify-content:space-between;">
-                            <h4 style="margin:0;">${sym}</h4>
-                            <span class="ticker-change ${data.changePercent && data.changePercent.startsWith('-') ? 'down' : 'up'}" style="color:${data.changePercent && data.changePercent.startsWith('-') ? '#EF4444' : '#10B981'}; font-weight:700;">${data.changePercent}</span>
-                        </div>
-                        <p style="font-size:0.75rem; color:var(--muted); margin-top:4px;">Massive.com Feed</p>
-                        <div style="margin-top:15px; display:flex; justify-content:space-between; align-items:flex-end;">
-                            <div>
-                                <span style="font-size:1.3rem; font-weight:800;">$${data.price.toLocaleString()}</span>
-                                <span style="font-size:0.7rem; color:var(--muted);">USD</span>
-                            </div>
-                            <button onclick="showTickerDetails('${sym}')" class="btn btn-ghost" style="font-size:0.7rem; padding:4px 8px; border-radius:6px; border:1px solid var(--groww-green); color:var(--groww-green);">Insights</button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
         }
 
         function renderSavingsList() {
@@ -1374,9 +1219,9 @@
 
             let html = '';
 
+            // SIPs
             contextData.investments.sipPlans.forEach(s => {
                 const perc = Math.min(100, (s.currentInvested / s.targetAmount) * 100);
-                const projected = InvestmentEngine.calculateProjections(s.monthlyAmount, 12, 10, true);
                 html += `
                 <div class="instrument-card" style="position: relative;">
                   <button onclick="deleteInvestment('${s.id}', 'sipPlans')" style="position: absolute; right: 8px; top: 8px; background: rgba(255,0,0,0.1); color: var(--danger); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;" title="Delete SIP">🗑️</button>
@@ -1384,7 +1229,7 @@
                     <h4>SIP: ${s.name}</h4>
                     <span style="font-size:0.8rem; background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:4px;">Mutual Fund</span>
                   </div>
-                  <p style="font-size:0.8rem; color:var(--muted);">Monthly: ₹${s.monthlyAmount.toLocaleString('en-IN')}</p>
+                  <p style="font-size:0.8rem; color:var(--muted);">Monthly Investment: ₹${s.monthlyAmount.toLocaleString('en-IN')}</p>
                   <div style="margin-top:12px;">
                     <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px;">
                         <span>₹${s.currentInvested.toLocaleString()} saved</span>
@@ -1392,14 +1237,11 @@
                     </div>
                     <div class="savings-bar-container"><div class="savings-bar" style="width: ${perc}%;"></div></div>
                   </div>
-                  <p style="font-size:0.75rem; color:var(--muted); margin-top:12px; border-top: 1px dashed var(--border-light); padding-top:8px;">
-                    🚀 Projected (10Y @ 12%): <span style="font-weight:700; color:var(--groww-green);">₹${Math.round(projected).toLocaleString('en-IN')}</span>
-                  </p>
                 </div>`;
             });
 
+            // FDs
             contextData.investments.fdAccounts.forEach(fd => {
-                const projected = InvestmentEngine.calculateProjections(fd.principal, fd.interestRate, 5);
                 html += `
                 <div class="instrument-card" style="position: relative;">
                   <button onclick="deleteInvestment('${fd.id}', 'fdAccounts')" style="position: absolute; right: 8px; top: 8px; background: rgba(255,0,0,0.1); color: var(--danger); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;" title="Delete FD">🗑️</button>
@@ -1408,41 +1250,48 @@
                     <span style="font-size:0.8rem; background:rgba(76, 175, 80, 0.1); color:#4CAF50; padding:2px 8px; border-radius:4px;">${fd.interestRate}% Return</span>
                   </div>
                   <p style="font-size:0.8rem; color:var(--muted);">Principal: ₹${fd.principal.toLocaleString('en-IN')}</p>
-                  <p style="font-size:0.75rem; color:var(--muted); margin-top:12px; border-top: 1px dashed var(--border-light); padding-top:8px;">
-                    📈 Value in 5Y: <span style="font-weight:700; color:var(--text);">₹${Math.round(projected).toLocaleString('en-IN')}</span>
-                  </p>
+                  <div style="margin-top:12px;">
+                     <div style="font-size:0.9rem; font-weight:700;">Maturity: ₹${fd.maturityValue.toLocaleString()}</div>
+                     <span style="font-size:0.7rem; color:var(--muted);">Fixed Deposit</span>
+                  </div>
                 </div>`;
             });
 
+            // RDs
             contextData.investments.rdAccounts.forEach(rd => {
                 const perc = Math.min(100, (rd.currentBalance / rd.targetAmount) * 100);
-                const projected = InvestmentEngine.calculateProjections(rd.currentBalance, rd.interestRate, 5);
                 html += `
                 <div class="instrument-card" style="position: relative;">
                   <button onclick="deleteInvestment('${rd.id}', 'rdAccounts')" style="position: absolute; right: 8px; top: 8px; background: rgba(255,0,0,0.1); color: var(--danger); border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;" title="Delete RD">🗑️</button>
-                  <h4>RD: ${rd.name}</h4>
-                  <p style="font-size:0.8rem; color:var(--muted);">Balance: ₹${rd.currentBalance.toLocaleString('en-IN')}</p>
-                  <div class="savings-bar-container" style="margin-top:8px;"><div class="savings-bar" style="background:#2196F3; width: ${perc}%;"></div></div>
-                  <p style="font-size:0.75rem; color:var(--muted); margin-top:12px;">
-                    📊 Value in 5Y: <span style="font-weight:700;">₹${Math.round(projected).toLocaleString('en-IN')}</span>
-                  </p>
+                  <div style="display:flex; justify-content:space-between; padding-right: 20px;">
+                    <h4>RD: ${rd.name}</h4>
+                    <span style="font-size:0.8rem; background:rgba(33, 150, 243, 0.1); color:#2196F3; padding:2px 8px; border-radius:4px;">Recurring</span>
+                  </div>
+                  <p style="font-size:0.8rem; color:var(--muted);">Current Balance: ₹${rd.currentBalance.toLocaleString('en-IN')}</p>
+                  <div style="margin-top:12px;">
+                     <div class="savings-bar-container"><div class="savings-bar" style="background:#2196F3; width: ${perc}%;"></div></div>
+                     <span style="font-size:0.75rem; color:var(--muted);">${perc.toFixed(0)}% completed</span>
+                  </div>
                 </div>`;
             });
 
-            container.innerHTML = html || '<p style="color:var(--muted); padding:20px; grid-column:1/-1; text-align:center;">No active savings plans found.</p>';
+            container.innerHTML = html || '<p style="color:var(--muted); padding:20px; grid-column:1/-1; text-align:center;">No active savings plans found. Add one to start tracking!</p>';
         }
 
+        // Global delete function attached to window for inline onclick handlers
         window.deleteInvestment = async function (id, collection) {
             if (confirm('Are you sure you want to delete this investment?')) {
                 try {
                     const uid = currentUser ? currentUser.uid : null;
                     await DBService.deleteData(uid, collection, id);
+                    alert('Investment deleted successfully.');
                 } catch (err) {
                     alert('Failed to delete: ' + err.message);
                 }
             }
         };
 
+        // AI CHAT INITIALIZATION FOR INVEST PAGE
         AIService.init({
             fab: document.getElementById('ai-chat-fab'),
             popup: document.getElementById('ai-chat-popup'),
@@ -1451,8 +1300,15 @@
             send: document.getElementById('ai-chat-send'),
             body: document.getElementById('ai-chat-body')
         }, () => {
-            const metrics = InvestmentEngine.calculatePortfolioMetrics(contextData.investments.holdings, contextData.investments.prices);
-            const savings = InvestmentEngine.calculateSavingsMetrics(contextData.investments.sipPlans, contextData.investments.fdAccounts, contextData.investments.rdAccounts);
+            const metrics = InvestmentEngine.calculatePortfolioMetrics(
+                contextData.investments.holdings,
+                contextData.investments.prices
+            );
+            const savings = InvestmentEngine.calculateSavingsMetrics(
+                contextData.investments.sipPlans,
+                contextData.investments.fdAccounts,
+                contextData.investments.rdAccounts
+            );
             return {
                 investments: contextData.investments.holdings,
                 sipPlans: contextData.investments.sipPlans,
@@ -1461,7 +1317,9 @@
                 prices: contextData.investments.prices,
                 portfolioMetrics: metrics,
                 savingsMetrics: savings,
-                totalWealth: metrics.totalValue + savings.totalSaved
+                totalWealth: metrics.totalValue + savings.totalSaved,
+                totalGain: metrics.totalGain,
+                gainPercentage: metrics.gainPercentage
             };
         });
 

@@ -650,7 +650,7 @@ if (processSmsBtn && smsPasteArea) {
           type: result.type || 'expense',
           dateISO: result.date || todayStr(),
           category: result.category || 'Miscellaneous',
-          subCategory: result.subCategory || 'Bank Sync',
+          subCategory: 'Bank Sync',
           mode: 'Bank Account',
           timestamp: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}Z`; })()
         };
@@ -680,23 +680,14 @@ if (processSmsBtn && smsPasteArea) {
           if (toggleExpense) toggleExpense.click();
         }
 
-        // Handle Category & Subcategory
+        // Handle Category
         if (categorySelect && result.category) {
-          const catOptions = Array.from(categorySelect.options);
-          const foundCat = catOptions.find(o => o.value.toLowerCase() === result.category.toLowerCase() || result.category.toLowerCase().includes(o.value.toLowerCase()));
+          const options = Array.from(categorySelect.options);
+          const found = options.find(o => o.value.toLowerCase() === result.category.toLowerCase() || result.category.toLowerCase().includes(o.value.toLowerCase()));
 
-          if (foundCat) {
-            categorySelect.value = foundCat.value;
-            categorySelect.dispatchEvent(new Event('change')); // Triggers sub-category filter
-
-            // Now try to set sub-category
-            if (subCategorySelect && result.subCategory) {
-              const subOptions = Array.from(subCategorySelect.options);
-              const foundSub = subOptions.find(o => o.value.toLowerCase() === result.subCategory.toLowerCase() || result.subCategory.toLowerCase().includes(o.value.toLowerCase()));
-              if (foundSub) {
-                subCategorySelect.value = foundSub.value;
-              }
-            }
+          if (found) {
+            categorySelect.value = found.value;
+            categorySelect.dispatchEvent(new Event('change'));
           }
         }
 

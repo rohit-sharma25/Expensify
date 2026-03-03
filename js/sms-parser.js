@@ -45,18 +45,19 @@ const tryRegexParse = (text) => {
     }
 
     // Amount patterns: Rs. 100, INR 100, 100.00
-    // Skip if preceded by Balance related words (negative lookbehind might not be supported everywhere, using a safer approach)
+    // Skip if preceded by Balance related words 
     const balancedWords = /balance|bal|avlbal|avl\sbal|available\sbalance|bal:|balance:/i;
-    const amtRegex = /(?:Rs\.?|INR|VPA|Amt|₹)\s*([\d,]+(?:\.\d{1,2})?)/gi;
+    // Updated regex to catch amounts followed by Dr./Cr. or preceded by symbols
+    const amtRegex = /(?:Rs\.?|INR|VPA|Amt|₹)\s*([\d,]+(?:\.\d{1,2})?)|([\d,]+(?:\.\d{1,2})?)\s*(?:cr\.|dr\.|cr\s|dr\s|dr:|cr:)/gi;
 
     let match;
     while ((match = amtRegex.exec(text)) !== null) {
-        const fullMatch = match[0];
+        const amtValue = match[1] || match[2];
         const matchIndex = match.index;
         const textBefore = text.substring(Math.max(0, matchIndex - 20), matchIndex).toLowerCase();
 
         if (!balancedWords.test(textBefore)) {
-            result.amount = parseFloat(match[1].replace(/,/g, ''));
+            result.amount = parseFloat(amtValue.replace(/,/g, ''));
             result.success = true;
             break;
         }

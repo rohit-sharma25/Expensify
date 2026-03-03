@@ -1,7 +1,7 @@
 // js/db-service.js
 import { db } from './firebase-config.js';
 import {
-    collection, doc, setDoc, getDocs, deleteDoc,
+    collection, doc, setDoc, getDocs, getDoc, deleteDoc,
     query, where, onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
@@ -145,6 +145,17 @@ export class DBService {
             console.error(`❌ DBService Subscription Setup Error [${collectionName}]:`, error.code || error.message, error);
             callback([]);
             return () => { };
+        }
+    }
+
+    static async getUserProfile(userId) {
+        if (!userId) return null;
+        try {
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            return userDoc.exists() ? userDoc.data() : null;
+        } catch (error) {
+            console.error('DBService GetUserProfile Error:', error);
+            return null;
         }
     }
 }

@@ -82,75 +82,46 @@ export class InvestmentEngine {
     }
 
     /**
-     * Calculates Asset Allocation Breakdown.
+     * Calculates asset allocation for charting.
      */
-    static calculateAssetAllocation(holdings, sipPlans, fdAccounts, rdAccounts, cachedPrices) {
-        let equity = 0;
-        let commodities = 0;
-        let fixedIncome = 0;
+    static calculateAllocation(holdings, savingsMetrics, prices = {}) {
+        const allocation = {
+            'Stocks/Equity': 0,
+            'Cash/Gold': 0,
+            'Fixed Income': 0
+        };
 
         holdings.forEach(h => {
-            const priceData = cachedPrices[h.symbol];
-            const price = (priceData && typeof priceData === 'object' ? priceData.price : priceData) || h.avgPrice || 0;
-            const value = h.quantity * price;
+            const priceData = prices[h.symbol];
+            const currentPrice = (priceData && typeof priceData === 'object' ? priceData.price : priceData) || h.avgPrice || 0;
+            const val = h.quantity * currentPrice;
 
-            if (h.type === 'STOCK') equity += value;
-            else if (h.type === 'COMMODITY') commodities += value;
+            if (h.symbol === 'GOLD' || h.symbol === 'SILVER') allocation['Cash/Gold'] += val;
+            else allocation['Stocks/Equity'] += val;
         });
 
-        sipPlans.forEach(s => equity += s.currentInvested); // SIPs are (mostly) equity
-        fdAccounts.forEach(fd => fixedIncome += fd.principal);
-        rdAccounts.forEach(rd => fixedIncome += rd.currentBalance);
+        allocation['Fixed Income'] += (savingsMetrics.totalSaved || 0);
 
-        const total = equity + commodities + fixedIncome;
+        return allocation;
+    }
+
+    /**
+     * Estimates monthly passive income from holdings and accounts.
+     */
+    static calculatePassiveIncome(fdAccounts, sipPlans) {
+        let monthly = 0;
+
+        fdAccounts.forEach(fd => {
+            // Rough estimate: Principal * ROI / 12
+            monthly += (fd.principal * (fd.interestRate / 100)) / 12;
+        });
+
+        // Add small yield estimate for stocks/SIPs if any (optional)
 
         return {
-            equity: total > 0 ? (equity / total) * 100 : 0,
-            commodities: total > 0 ? (commodities / total) * 100 : 0,
-            fixedIncome: total > 0 ? (fixedIncome / total) * 100 : 0,
-            total
+            monthlyEstimated: monthly,
+            annualEstimated: monthly * 12
         };
-    }
-
-    /**
-     * Estimates Annual Passive Income.
-     */
-    static calculatePassiveIncome(holdings, sipPlans, fdAccounts, rdAccounts, cachedPrices) {
-        let annualIncome = 0;
-
-        // Assumed Dividend Yield: 1.5% for stocks
-        holdings.forEach(h => {
-            if (h.type === 'STOCK') {
-                const priceData = cachedPrices[h.symbol];
-                const price = (priceData && typeof priceData === 'object' ? priceData.price : priceData) || h.avgPrice || 0;
-                const value = h.quantity * price;
-                annualIncome += value * 0.015;
-            }
-        });
-
-        // Assumed Dividend Yield: 1% for SIPs
-        sipPlans.forEach(s => {
-            annualIncome += s.currentInvested * 0.01;
-        });
-
-        // FD/RD interest
-        fdAccounts.forEach(fd => annualIncome += fd.principal * (fd.interestRate / 100));
-        rdAccounts.forEach(rd => annualIncome += rd.currentBalance * (rd.interestRate / 100));
-
-        return annualIncome;
-    }
-
-    /**
-     * Calculates Projected Wealth.
-     */
-    static calculateProjections(amount, rate, years, isMonthly = false) {
-        if (isMonthly) {
-            const monthlyRate = (rate / 100) / 12;
-            const months = years * 12;
-            return amount * (((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate));
-        } else {
-            return amount * Math.pow(1 + (rate / 100), years);
-        }
     }
 
     /**

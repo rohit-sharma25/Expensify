@@ -15,12 +15,9 @@ export class PriceService {
     static EXCHANGE_RATE_CACHE_DURATION = 3600000; // 1 hour
 
     // API Call Caching: Limit expensive APIs to 1-2 calls per day
-    // Keep API calls infrequent — respect cached DB timestamp
-    static API_CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours for commodities
-    static STOCKS_CACHE_DURATION = 2 * 60 * 60 * 1000; // 2 hours for stocks
-
-    // API Call Caching
     static apiCallCache = {};
+    // Keep API calls infrequent — respect cached DB timestamp (set to 24h by default)
+    static API_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours between API calls
 
     // Cached commodity prices (realistic market rates as of 2026)
     static lastKnownPrices = {
@@ -83,20 +80,19 @@ export class PriceService {
      * Check if we should make a real API call or use cached data
      * Limits expensive APIs to 1-2 calls per day
      */
-    static shouldFetchFromAPI(apiName, symbol = '', durationOverride = null) {
+    static shouldFetchFromAPI(apiName, symbol = '') {
         const now = Date.now();
         const cacheKey = symbol ? `${apiName}_${symbol}` : apiName;
         const lastCall = this.apiCallCache[cacheKey];
-        const duration = durationOverride || this.API_CACHE_DURATION;
 
-        if (!lastCall || (now - lastCall) >= duration) {
+        if (!lastCall || (now - lastCall) >= this.API_CACHE_DURATION) {
             this.apiCallCache[cacheKey] = now;
             console.log(`📍 ${cacheKey}: Making API call (last call: ${lastCall ? new Date(lastCall).toLocaleString() : 'never'})`);
             return true;
         }
 
         const timeSinceLastCall = ((now - lastCall) / (1000 * 60)).toFixed(1); // in minutes
-        console.log(`⏱️ ${cacheKey}: Skipping API call (used ${timeSinceLastCall} min ago, wait ${((duration - (now - lastCall)) / (1000 * 60)).toFixed(1)}+ min)`);
+        console.log(`⏱️ ${cacheKey}: Skipping API call (used ${timeSinceLastCall} min ago, wait ${((this.API_CACHE_DURATION - (now - lastCall)) / (1000 * 60)).toFixed(1)}+ min)`);
         return false;
     }
 
@@ -120,7 +116,7 @@ export class PriceService {
     static async syncMarketData(uid, holdings) {
         if (!uid) return;
 
-        const symbols = new Set(['GOLD', 'SILVER', 'AAPL', 'MSFT', 'GOOGL', 'TSLA', 'RELIANCE.BSE', 'TCS.BSE']);
+        const symbols = new Set(['GOLD', 'SILVER', 'RELIANCE.BSE', 'TCS.BSE']);
         if (holdings) {
             holdings.forEach(h => {
                 if (h.type === 'STOCK' || h.type === 'COMMODITY') symbols.add(h.symbol);
@@ -145,21 +141,19 @@ export class PriceService {
                 let quoteData;
                 const existing = existingMap[symbol];
                 const now = Date.now();
-                const isCommodity = symbol === 'GOLD' || symbol === 'SILVER';
-                const cacheWindow = isCommodity ? this.API_CACHE_DURATION : this.STOCKS_CACHE_DURATION;
 
-                // Enforce Firestore Cache Consistency (Uniform for all assets)
-                if (existing && existing.updatedAt) {
+                // Commodities (GOLD/SILVER) are expensive; only fetch if cache expired.
+                if ((symbol === 'GOLD' || symbol === 'SILVER') && existing && existing.updatedAt) {
                     const lastUpdated = new Date(existing.updatedAt).getTime();
-                    if ((now - lastUpdated) < cacheWindow) {
+                    if ((now - lastUpdated) < this.API_CACHE_DURATION) {
                         console.log(`[${symbol}] Using DB cachedMarketData (updated ${Math.floor((now - lastUpdated) / 60000)}m ago)`);
                         quoteData = { ...existing, isLive: false };
                     }
                 }
 
-                // If no valid cache, fetch from external APIs
+                // Stocks/MFs: always attempt fresh quote since Yahoo has no strict limit.
                 if (!quoteData) {
-                    if (isCommodity) {
+                    if (symbol === 'GOLD' || symbol === 'SILVER') {
                         quoteData = await this.fetchCommodityQuote(symbol);
                     } else {
                         quoteData = await this.fetchStockQuote(symbol);
@@ -269,30 +263,19 @@ export class PriceService {
      * ⚠️ Twelve Data LIMITED TO 1-2 CALLS PER DAY
      */
     static async fetchStockQuote(symbol) {
-        const isIndian = symbol.endsWith('.BSE') || symbol.endsWith('.NS');
-
-        // 1. Indian Stocks Priority: Yahoo -> TwelveData -> Polygon
-        if (isIndian) {
-            const yahooData = await this.fetchYahooQuote(symbol);
-            if (yahooData) return yahooData;
-
-            const twelveData = await this.fetchTwelveDataQuote(symbol);
-            if (twelveData) return twelveData;
-
-            return await this.fetchPolygonQuote(symbol);
-        }
-
-        // 2. US Stocks Priority: Polygon -> Yahoo -> TwelveData
+        // 1. Try Polygon.io (User Requested Priority)
         const polygonData = await this.fetchPolygonQuote(symbol);
-        if (polygonData) return polygonData;
+        if (polygonData && polygonData.isLive) return polygonData;
 
+        // 2. Try Yahoo Finance (RapidAPI) - Best for India (no daily limit)
         const yahooData = await this.fetchYahooQuote(symbol);
-        if (yahooData) return yahooData;
+        if (yahooData && yahooData.isLive) return yahooData;
 
+        // 3. Try Twelve Data (LIMITED: only 1-2 calls per day)
         const twelveData = await this.fetchTwelveDataQuote(symbol);
-        if (twelveData) return twelveData;
+        if (twelveData && twelveData.isLive) return twelveData;
 
-        // 3. Absolute Fallback: Finnhub (Original)
+        // 4. Fallback to Finnhub (Original logic)
         return this.fetchQuote(symbol);
     }
 
@@ -304,10 +287,8 @@ export class PriceService {
         const apiKey = CONFIG.POLYGON_API_KEY;
         if (!apiKey || apiKey === 'YOUR_POLYGON_API_KEY') return null;
 
-        const isCommodity = symbol === 'GOLD' || symbol === 'SILVER';
-        const duration = isCommodity ? this.API_CACHE_DURATION : this.STOCKS_CACHE_DURATION;
-
-        if (!this.shouldFetchFromAPI('Polygon', symbol, duration)) {
+        if (!this.shouldFetchFromAPI('Polygon', symbol)) {
+            console.log(`💾 Using cached quote for ${symbol} from Polygon`);
             return null;
         }
 
@@ -392,11 +373,9 @@ export class PriceService {
         const apiKey = CONFIG.TWELVEDATA_API_KEY;
         if (!apiKey || apiKey === 'YOUR_TWELVEDATA_API_KEY') return null;
 
-        const isCommodity = symbol === 'GOLD' || symbol === 'SILVER';
-        const duration = isCommodity ? this.API_CACHE_DURATION : this.STOCKS_CACHE_DURATION;
-
         // ⏰ Check if we should call the API (max 1-2 times per day per symbol)
-        if (!this.shouldFetchFromAPI('TwelveData', symbol, duration)) {
+        if (!this.shouldFetchFromAPI('TwelveData', symbol)) {
+            console.log(`💾 Using cached quote for ${symbol} from Twelve Data`);
             return null; // Skip this API call, let fallback handle it
         }
 
@@ -494,13 +473,7 @@ export class PriceService {
         const mapped = this.SYMBOL_MAP[symbol] ? this.SYMBOL_MAP[symbol].finnhub : symbol;
 
         if (!apiKey || apiKey === 'YOUR_FINNHUB_KEY') {
-            return this.getMockQuote(symbol);
-        }
-
-        const isCommodity = symbol === 'GOLD' || symbol === 'SILVER';
-        const duration = isCommodity ? this.API_CACHE_DURATION : this.STOCKS_CACHE_DURATION;
-
-        if (!this.shouldFetchFromAPI('Finnhub', symbol, duration)) {
+            console.warn('⚠️ Finnhub API key missing. Using mock data.');
             return this.getMockQuote(symbol);
         }
 

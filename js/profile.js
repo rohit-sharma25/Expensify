@@ -2,6 +2,8 @@
 import { AuthService } from './auth-service.js';
 import { DBService } from './db-service.js';
 import { GamificationService } from './gamification-service.js';
+import { db } from './firebase-config.js';
+import { doc, setDoc, Timestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 document.addEventListener('DOMContentLoaded', () => {
     AuthService.onUserChange(async (user) => {
@@ -9,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderUserInfo(user);
             await renderGamificationStats();
             await renderFinancialSummary(user.uid);
+            await initTelegramSync(user.uid);
         } else {
             const isLocal = AuthService.isLocalOnly();
             if (isLocal) {
@@ -29,13 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function renderUserInfo(user) {
     document.getElementById('profile-name').textContent = user.displayName || "User";
     document.getElementById('profile-email').textContent = user.email || "Offline Account";
-    
+
     const photoElement = document.getElementById('profile-photo');
     if (photoElement) {
         const displayName = user.displayName || "User";
         const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=5B6CF2&color=fff`;
         const photoUrl = user.photoURL || fallbackUrl;
-        
+
         photoElement.src = photoUrl;
         photoElement.onerror = () => {
             photoElement.src = fallbackUrl;
@@ -79,6 +82,68 @@ async function renderFinancialSummary(uid) {
         const dates = new Set(finances.map(f => f.dateISO));
         document.getElementById('active-days').textContent = dates.size;
     }
+}
+
+async function initTelegramSync(uid) {
+    const syncCard = document.getElementById('telegram-sync-card');
+    const syncCodeText = document.getElementById('sync-code-text');
+    const generateSyncBtn = document.getElementById('generate-sync-btn');
+    const linkedStatus = document.getElementById('linked-status');
+    const syncInstruction = document.getElementById('sync-instruction');
+
+    if (!syncCard) return;
+
+    // Check if already linked
+    const userProfile = await DBService.getUserProfile(uid);
+    if (userProfile && userProfile.telegramLinked) {
+        linkedStatus.style.display = 'block';
+        generateSyncBtn.style.display = 'none';
+        syncInstruction.style.display = 'none';
+        return;
+    }
+
+    // Handle Generate Sync Code
+    generateSyncBtn.addEventListener('click', async () => {
+        generateSyncBtn.disabled = true;
+        generateSyncBtn.textContent = 'Generating...';
+
+        try {
+            if (!uid) throw new Error('User UID is missing. Please log in again.');
+
+            // Generate 6-digit Sync Code
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // Using a plain Date object which Firestore handles as a Timestamp
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+            console.log('🔗 Attempting to save sync code to Firestore root collection...');
+
+            // Save directly to Firestore 
+            // NOTE: This requires 'syncCodes' collection to have write permissions for authenticated users
+            await setDoc(doc(db, 'syncCodes', code), {
+                uid: uid,
+                expiresAt: expiresAt,
+                createdAt: new Date()
+            });
+
+            syncCodeText.textContent = code;
+            syncCodeText.style.display = 'block';
+            generateSyncBtn.style.display = 'none';
+
+            syncInstruction.innerHTML = `Send code <b>${code}</b> to <a href="https://t.me/ExpensifierBot" target="_blank" style="color: #24A1DE; font-weight: 700;">@ExpensifierBot</a><br><small>(Expires in 10 mins)</small>`;
+        } catch (err) {
+            console.error('Frontend Sync Code Error:', err);
+            generateSyncBtn.disabled = false;
+            generateSyncBtn.textContent = 'Try Again';
+
+            // Helping the user identify if it's a permission issue or something else
+            const errorMsg = err.code === 'permission-denied'
+                ? 'Permission Denied: Please check your Firebase Firestore rules for "syncCodes" collection.'
+                : err.message;
+
+            alert('Sync Error: ' + errorMsg);
+        }
+    });
 }
 
 // Logout Logic
